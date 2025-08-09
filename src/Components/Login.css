@@ -1,0 +1,106 @@
+.login-form {
+  background-color: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  padding: 2rem;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.forgot-password {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 0.9rem;
+  color: #90CAC7;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+
+.login-form h1 {
+  font-size: 2rem;
+  margin-bottom: 0.3rem;
+  text-align: center;
+  color: white;
+  font-weight: bold;
+}
+
+/* Input Container */
+.input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+  transition: all 0.3s ease;
+}
+
+.input-container:focus-within {
+  border-color: #539D98;
+  color: #539D98;
+}
+
+.input-container input {
+  background: transparent;
+  border: none;
+  outline: none;
+  flex: 1;
+  color: white;
+  padding: 0.2rem 0;
+  font-size: 0.8rem;
+}
+
+.input-container input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.input-icon {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.2rem;
+  margin-right: 0.75rem;
+  min-width: 24px;
+  transition: color 0.3s ease;
+}
+
+.input-container:focus-within .input-icon {
+  color: #539D98;
+}
+
+/* Button Styles */
+.btn {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #539D98;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-top: 0.5rem;
+}
+
+.btn:hover {
+  background-color: #437e79;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  .login-form {
+    padding: 1.5rem;
+  }
+  
+  .login-form h1 {
+    font-size: 1.75rem;
+  }
+  
+  .input-container {
+    padding: 0.6rem 0.8rem;
+  }
+}
