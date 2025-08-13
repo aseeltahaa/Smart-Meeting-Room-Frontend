@@ -23,7 +23,7 @@ function HeaderTest() {
           </Link>
           <nav className="hidden md:inline">
             <Link to="/booking" className="text-white py-8 px-4 no-underline">Booking</Link>
-            <Link to="/about" className="text-white py-8 px-4 no-underline">About Us</Link>
+            <Link to="/AboutUs" className="text-white py-8 px-4 no-underline">About Us</Link>
             <Link to="/admin" className="text-white py-8 px-4 no-underline">Admin Panel</Link>
           </nav>
         </div>
