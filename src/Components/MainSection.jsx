@@ -1,6 +1,7 @@
 import React from 'react';
 import '../App.css'; 
 import heroImage from '../assets/main-bg.jpg';
+import { Link } from 'react-router-dom';
 
 function MainSection() {
   return (
@@ -32,12 +33,14 @@ function MainSection() {
             Book rooms fast. Avoid conflicts. Stay organized with SmartSpace.
           </p>
 
-          <button
-            className="bg-white text-brand-teal-dark border-none py-28 px-12 w-full md:w-auto"
-            style={{ marginTop: '30px', borderRadius: '4px' }}
-          >
-            Get Started
-          </button>
+          <Link to="/booking">
+            <button
+              className="bg-white text-brand-teal-dark border-none py-28 px-12 w-full md:w-auto"
+              style={{ marginTop: '30px', borderRadius: '4px' }}
+            >
+              Get Started
+            </button>
+          </Link>
         </div>
       </div>
     </section>
