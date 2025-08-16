@@ -25,7 +25,7 @@ function Header({ showSearchBar = false, showGradient = true }) {
             <img src={logo} alt="Logo" style={{ marginRight: '50px', width: '50px' }} />
           </Link>
           <nav className="hidden md:inline">
-            <Link to="/booking" className={`${showGradient ? 'text-white' : 'text-black'} py-8 px-4 no-underline`}>Booking</Link>
+            <Link to="/RoomDisplay" className={`${showGradient ? 'text-white' : 'text-black'} py-8 px-4 no-underline`}>Booking</Link>
             <Link to="/AboutUs" className={`${showGradient ? 'text-white' : 'text-black'} py-8 px-4 no-underline`}>About Us</Link>
             <Link to="/admin" className={`${showGradient ? 'text-white' : 'text-black'} py-8 px-4 no-underline`}>Admin Panel</Link>
           </nav>
@@ -68,7 +68,7 @@ function Header({ showSearchBar = false, showGradient = true }) {
       {menuOpen && (
         <div className="fixed top-0 right-0 h-full w-3/4 bg-white bg-opacity-80 z-70 flex flex-col items-center justify-center md:hidden transition-all duration-300 ease-in-out">
           <nav className="flex flex-col gap-8">
-            <Link to="/booking" className="text-xl" onClick={() => setMenuOpen(false)}>Booking</Link>
+            <Link to="/RoomDisplay" className="text-xl" onClick={() => setMenuOpen(false)}>Booking</Link>
             <Link to="/AboutUs"  className="text-xl" onClick={() => setMenuOpen(false)}>About Us</Link>
             <Link to="/admin"  className="text-xl" onClick={() => setMenuOpen(false)}>Admin Panel</Link>
             <Link to="/Login"  className="text-xl" onClick={() => setMenuOpen(false)}>Login</Link>

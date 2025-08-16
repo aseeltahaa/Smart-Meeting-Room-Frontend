@@ -1,5 +1,5 @@
 import Card from "./Card";
-import RoomImage from "../assets/room.png";
+import RoomImage from "../assets/room.jpg";
 import '../App.css'; 
 
 function PopularRooms() {
