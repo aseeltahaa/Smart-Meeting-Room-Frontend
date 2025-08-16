@@ -6,13 +6,22 @@ import NotFound from './Pages/NotFound.jsx'
 import LoginPage from './Pages/LoginPage.jsx'
 import AboutUs from './Pages/AboutUs.jsx'
 import Booking from './Pages/Booking.jsx'
+import AdminPanel from './Pages/AdminPanel.jsx'
+import RegisterUser from './Pages/RegisterPage.jsx'  
+import FeaturePage from './Pages/FeaturePage.jsx'
+import RoomRegister from './Pages/RoomRegister.jsx'
+
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 
 const router = createBrowserRouter([
   { path: "/", element: <App /> },
-  { path: "/Login", element: <LoginPage/> },
-  { path: "/AboutUs", element: <AboutUs/>},
-  { path: "/Booking", element: <Booking/> },
+  { path: "/admin", element: <AdminPanel /> },
+  { path: "/admin/register", element: <RegisterUser /> }, 
+  { path: "/admin/features", element: <FeaturePage /> },
+  {path: "/admin/rooms", element: <RoomRegister /> }, 
+  { path: "/login", element: <LoginPage /> },
+  { path: "/aboutus", element: <AboutUs /> },
+  { path: "/booking", element: <Booking /> },
   { path: "*", element: <NotFound /> }
 ]);
 
