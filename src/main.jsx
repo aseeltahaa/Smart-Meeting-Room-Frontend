@@ -10,6 +10,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 
 const router = createBrowserRouter([
   { path: "/", element: <App /> },
+  {path: "/AdminPanel", element: <AdminPanel /> },
   { path: "/Login", element: <LoginPage/> },
   { path: "/AboutUs", element: <AboutUs/>},
   { path: "/Booking", element: <Booking/> },

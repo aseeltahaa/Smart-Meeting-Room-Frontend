@@ -26,6 +26,7 @@ function MainSection() {
             <span className="text-brand-teal">Book SmartSpace</span>
           </h1>
 
+
           <p
             className="text-white text-16 sm:text-20"
             style={{ maxWidth: '499px', marginTop: '20px' }}
