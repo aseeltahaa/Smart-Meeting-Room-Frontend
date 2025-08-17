@@ -34,7 +34,7 @@ function MainSection() {
             Book rooms fast. Avoid conflicts. Stay organized with SmartSpace.
           </p>
 
-          <Link to="/booking">
+          <Link to="/RoomDisplay">
             <button
               className="bg-white text-brand-teal-dark border-none py-28 px-12 w-full md:w-auto"
               style={{ marginTop: '30px', borderRadius: '4px' }}
