@@ -11,6 +11,7 @@ import RegisterUser from './Pages/RegisterPage.jsx'
 import FeaturePage from './Pages/FeaturePage.jsx'
 import RoomRegister from './Pages/RoomRegister.jsx'
 import RoomInfo from './Pages/RoomInfo.jsx';
+import UpdateRoomPage from './Pages/UpdateRoomPage.jsx';
 
 
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
@@ -21,6 +22,7 @@ const router = createBrowserRouter([
   { path: "/admin/register", element: <RegisterUser /> }, 
   { path: "/admin/features", element: <FeaturePage /> },
   {path: "/admin/rooms", element: <RoomRegister /> }, 
+  {path: "/admin/update-room", element: <UpdateRoomPage /> },
   { path: "/login", element: <LoginPage /> },
   { path: "/aboutus", element: <AboutUs /> },
   { path: "/RoomDisplay", element: <RoomDisplay /> },
