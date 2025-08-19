@@ -24,182 +24,6 @@ const roomImages = {
   'Room 401': Room401,
 };
 
-// BookingForm component
-function BookingForm({ roomId, selectedDate, setSelectedDate, meetings, addMeeting }) {
-  const [formData, setFormData] = useState({
-    title: '',
-    agenda: '',
-    date: selectedDate.toISOString().split('T')[0],
-    startTime: '',
-    endTime: '',
-    status: 'Scheduled',
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
-  // Update form date when selectedDate changes
-  useEffect(() => {
-    setFormData(prev => ({
-      ...prev,
-      date: selectedDate.toISOString().split('T')[0]
-    }));
-  }, [selectedDate]);
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    if (e.target.name === 'date') {
-      setSelectedDate(new Date(e.target.value));
-    }
-  };
-
-  const validateTimeRange = (startTime, endTime) => {
-    if (!startTime || !endTime) return false;
-    const start = new Date(`2000-01-01T${startTime}`);
-    const end = new Date(`2000-01-01T${endTime}`);
-    return start < end;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setSuccess('');
-
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setError('No token found. Please log in.');
-      setLoading(false);
-      return;
-    }
-
-    // Validate time range
-    if (!validateTimeRange(formData.startTime, formData.endTime)) {
-      setError('End time must be after start time.');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const startDateTime = new Date(`${formData.date}T${formData.startTime}`);
-      const endDateTime = new Date(`${formData.date}T${formData.endTime}`);
-
-      // Overlap check
-      const overlap = meetings.some(m => {
-        const mStart = new Date(m.startTime);
-        const mEnd = new Date(m.endTime);
-        return startDateTime < mEnd && endDateTime > mStart;
-      });
-
-      if (overlap) {
-        setError('Selected time overlaps with an existing meeting.');
-        setLoading(false);
-        return;
-      }
-
-      const res = await fetch('https://localhost:7074/api/Meeting', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: formData.title,
-          agenda: formData.agenda,
-          startTime: startDateTime.toISOString(),
-          endTime: endDateTime.toISOString(),
-          status: formData.status,
-          roomId: roomId,
-        }),
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Failed to create booking: ${res.status} ${errorText}`);
-      }
-      
-      const data = await res.json();
-
-      // Update timeline immediately
-      addMeeting(data);
-
-      setSuccess('Meeting booked successfully!');
-      setFormData({ 
-        title: '', 
-        agenda: '', 
-        date: formData.date, 
-        startTime: '', 
-        endTime: '', 
-        status: 'Scheduled' 
-      });
-    } catch (err) {
-      setError(err.message);
-      console.error('Booking error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      <input 
-        type="text" 
-        name="title" 
-        placeholder="Meeting Title" 
-        value={formData.title} 
-        onChange={handleChange} 
-        required 
-        className="border p-2 rounded"
-      />
-      <textarea 
-        name="agenda" 
-        placeholder="Agenda" 
-        value={formData.agenda} 
-        onChange={handleChange} 
-        required 
-        className="border p-2 rounded"
-      />
-      <input 
-        type="date" 
-        name="date" 
-        value={formData.date} 
-        onChange={handleChange} 
-        required 
-        className="border p-2 rounded"
-      />
-      <div className="flex gap-2">
-        <input
-          type="time"
-          name="startTime"
-          placeholder="Start Time"
-          value={formData.startTime}
-          onChange={handleChange}
-          required
-          className="border p-2 rounded flex-1"
-        />
-        <input
-          type="time"
-          name="endTime"
-          placeholder="End Time"
-          value={formData.endTime}
-          onChange={handleChange}
-          required
-          className="border p-2 rounded flex-1"
-        />
-      </div>
-      <button 
-        type="submit" 
-        disabled={loading} 
-        className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition disabled:opacity-50"
-      >
-        {loading ? 'Booking...' : 'Book Room'}
-      </button>
-      {error && <p className="text-red-500">{error}</p>}
-      {success && <p className="text-green-500">{success}</p>}
-    </form>
-  );
-}
-
 function RoomInfo() {
   const { roomId } = useParams();
   const [room, setRoom] = useState(null);
@@ -224,13 +48,12 @@ function RoomInfo() {
 
   // Fetch room info
   useEffect(() => {
-    const fetchRoomInfo = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setError('No token found. Please log in.');
-        setLoading(false);
-        return;
-      }
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('No token found. Please log in.');
+      setLoading(false);
+      return;
+    }
 
     fetch(`https://localhost:7074/api/Room/${roomId}`, {
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
@@ -249,21 +72,15 @@ function RoomInfo() {
             .catch(() => null)
         );
 
-          const featureData = await Promise.all(featurePromises);
-          setFeatures(featureData.filter(f => f).map(f => f.name));
-        }
-
+        const featureData = await Promise.all(featurePromises);
+        setFeatures(featureData.filter(f => f).map(f => f.name));
         setLoading(false);
-      } catch (err) {
+      })
+      .catch(err => {
         console.error('Error fetching room info:', err);
-        setError(`Failed to fetch room info: ${err.message}`);
+        setError('Failed to fetch room info.');
         setLoading(false);
-      }
-    };
-
-    if (roomId) {
-      fetchRoomInfo();
-    }
+      });
   }, [roomId]);
 
   // Fetch meetings for the room and selected date
@@ -323,8 +140,8 @@ function RoomInfo() {
       return;
     }
 
-    const startUTC = new Date(`${selectedDate.toISOString().split('T')[0]}T${formData.startTime}`).toISOString();
-    const endUTC = new Date(`${selectedDate.toISOString().split('T')[0]}T${formData.endTime}`).toISOString();
+    const startUTC = new Date(selectedDate.toISOString().split('T')[0] + 'T' + formData.startTime).toISOString();
+    const endUTC = new Date(selectedDate.toISOString().split('T')[0] + 'T' + formData.endTime).toISOString();
 
     const body = {
       title: formData.title || 'Untitled',
@@ -405,8 +222,8 @@ function RoomInfo() {
         {/* Desktop Timeline */}
         <div className="hidden md:block relative border rounded-lg overflow-hidden bg-gray-100 max-w-5xl mx-auto h-20">
           <div className="absolute inset-0 flex">
-            {Array.from({ length: 12 }, (_, i) => (
-              <div key={i} className="flex-1 border-l border-gray-300 relative first:border-l-0"></div>
+            {Array.from({ length: 11 }, (_, i) => (
+              <div key={i} className="flex-1 border-l border-gray-300 relative"></div>
             ))}
           </div>
           {meetings.map((m, idx) => {
@@ -425,8 +242,8 @@ function RoomInfo() {
         {/* Mobile Timeline */}
         <div className="md:hidden relative border rounded-lg overflow-hidden bg-gray-100 max-w-2xl mx-auto h-[300px]">
           <div className="absolute inset-0 flex flex-col">
-            {Array.from({ length: 12 }, (_, i) => (
-              <div key={i} className="flex-1 border-t border-gray-300 relative first:border-t-0"></div>
+            {Array.from({ length: 11 }, (_, i) => (
+              <div key={i} className="flex-1 border-t border-gray-300 relative"></div>
             ))}
           </div>
           {meetings.map((m, idx) => {
@@ -444,26 +261,10 @@ function RoomInfo() {
 
         {/* Legend */}
         <div className="mt-4 flex justify-center space-x-6 items-center">
-          <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 bg-blue-500 rounded-sm"></div>
-            <span>Booked</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 bg-gray-200 border border-gray-300 rounded-sm"></div>
-            <span>Free</span>
-          </div>
-        </div>
-
-        {/* Booking Form */}
-        <div className="mt-8 max-w-xl mx-auto">
-          <h3 className="text-xl font-bold mb-4">Book this Room</h3>
-          <BookingForm 
-            roomId={roomId} 
-            selectedDate={selectedDate} 
-            setSelectedDate={setSelectedDate} 
-            meetings={meetings} 
-            addMeeting={addMeeting}
-          />
+          <div className="w-6 h-6 bg-blue-500 rounded-sm"></div>
+          <span>Booked</span>
+          <div className="w-6 h-6 bg-gray-200 border border-gray-300 rounded-sm"></div>
+          <span>Free</span>
         </div>
       </section>
 
