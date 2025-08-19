@@ -12,8 +12,8 @@ import DeleteUser from '../Components/DeleteUser';
 function AdminPanel() {
   return (
     <>
-      <Header />
-      <div className="admin-container min-h-screen bg-gray-100 flex flex-col items-center p-6">
+      <Header  showGradient={false}/>
+      <div className="admin-container min-h-screen flex flex-col items-center p-6">
         <h2 className="text-3xl font-bold mb-6">Admin Panel</h2>
 
         {/* ================= USER MANAGEMENT ================= */}

@@ -4,7 +4,7 @@ import Header from '../Components/Header';
 import Footer from '../Components/Footer';
 import RoomImage from '../assets/room.jpg';
 
-// Hardcoded images
+// Hardcoded room images
 import Room101 from '../assets/rooms/room101.jpg';
 import Room102 from '../assets/rooms/room102.jpg';
 import Room201 from '../assets/rooms/room201.jpg';
@@ -207,7 +207,19 @@ function RoomInfo() {
   const [error, setError] = useState(null);
   const [meetings, setMeetings] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [meetingsLoading, setMeetingsLoading] = useState(false);
+
+  // Form state
+  const [formData, setFormData] = useState({ title: '', agenda: '', startTime: '', endTime: '' });
+  const [bookingError, setBookingError] = useState(null);
+  const [bookingSuccess, setBookingSuccess] = useState(null);
+
+  // Convert UTC → Beirut time
+  const convertUTCToBeirut = (utcString) => {
+    if (!utcString) return null;
+    const utcDate = new Date(utcString);
+    const beirutOffset = 3 * 60; // +3 hours
+    return new Date(utcDate.getTime() + beirutOffset * 60 * 1000);
+  };
 
   // Fetch room info
   useEffect(() => {
@@ -219,37 +231,22 @@ function RoomInfo() {
         return;
       }
 
-      try {
-        const roomResponse = await fetch(`https://localhost:7074/api/Room/${roomId}`, {
-          headers: { 
-            'Authorization': `Bearer ${token}`, 
-            'Accept': 'application/json' 
-          },
-        });
-
-        if (!roomResponse.ok) {
-          throw new Error(`Failed to fetch room: ${roomResponse.status}`);
-        }
-
-        const roomData = await roomResponse.json();
-        setRoom(roomData);
-
-        // Fetch features if they exist
-        if (roomData.featureIds && roomData.featureIds.length > 0) {
-          const featurePromises = roomData.featureIds.map(async (id) => {
-            try {
-              const featureResponse = await fetch(`https://localhost:7074/api/Features/${id}`, {
-                headers: { 
-                  'Authorization': `Bearer ${token}`, 
-                  'Accept': 'application/json' 
-                },
-              });
-              return featureResponse.ok ? await featureResponse.json() : null;
-            } catch (err) {
-              console.error(`Error fetching feature ${id}:`, err);
-              return null;
-            }
-          });
+    fetch(`https://localhost:7074/api/Room/${roomId}`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
+      .then(async data => {
+        setRoom(data);
+        const featurePromises = data.featureIds.map(id =>
+          fetch(`https://localhost:7074/api/Features/${id}`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+          })
+            .then(res => (res.ok ? res.json() : null))
+            .catch(() => null)
+        );
 
           const featureData = await Promise.all(featurePromises);
           setFeatures(featureData.filter(f => f).map(f => f.name));
@@ -268,151 +265,112 @@ function RoomInfo() {
     }
   }, [roomId]);
 
-  // Fetch meetings for selected date
-  useEffect(() => {
-    const fetchMeetings = async () => {
-      if (!roomId) return;
-      
-      setMeetingsLoading(true);
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        console.error('No token found for fetching meetings');
-        setMeetingsLoading(false);
-        return;
-      }
+  // Fetch meetings for the room and selected date
+  const fetchMeetings = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
 
-      try {
-        const response = await fetch('https://localhost:7074/api/Meeting', {
-          headers: { 
-            'Authorization': `Bearer ${token}`, 
-            'Accept': 'application/json' 
-          },
-        });
+    fetch('https://localhost:7074/api/Meeting', {
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        const startOfDay = new Date(selectedDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(selectedDate);
+        endOfDay.setHours(23, 59, 59, 999);
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch meetings: ${response.status}`);
-        }
-
-        const allMeetings = await response.json();
-        
-        // Filter meetings for this room and selected date
-        const roomMeetings = allMeetings.filter(meeting => {
-          const meetingDate = new Date(meeting.startTime);
-          const selectedDateStr = selectedDate.toDateString();
-          const meetingDateStr = meetingDate.toDateString();
-          
-          return meeting.roomId.toLowerCase() === roomId.toLowerCase() && 
-                 meetingDateStr === selectedDateStr;
-        });
+        const roomMeetings = data
+          .filter(m => m.roomId.toLowerCase() === roomId.toLowerCase())
+          .filter(m => {
+            const meetingStart = convertUTCToBeirut(m.startTime);
+            const meetingEnd = convertUTCToBeirut(m.endTime);
+            return meetingEnd >= startOfDay && meetingStart <= endOfDay;
+          })
+          .map(m => ({
+            ...m,
+            startBeirut: convertUTCToBeirut(m.startTime),
+            endBeirut: convertUTCToBeirut(m.endTime),
+          }));
 
         setMeetings(roomMeetings);
-        console.log('Filtered meetings for room and date:', roomMeetings);
-      } catch (err) {
-        console.error('Error fetching meetings:', err);
-        // Don't set error state here as it's not critical for room display
-      } finally {
-        setMeetingsLoading(false);
-      }
-    };
+      })
+      .catch(err => console.error('Error fetching meetings:', err));
+  };
 
+  useEffect(() => {
     fetchMeetings();
   }, [roomId, selectedDate]);
 
-  const addMeeting = (newMeeting) => {
-    // Only add if it's for the selected date to refresh the timeline
-    const meetingDate = new Date(newMeeting.startTime);
-    if (meetingDate.toDateString() === selectedDate.toDateString()) {
-      setMeetings(prev => {
-        // Check if meeting already exists to avoid duplicates
-        const exists = prev.some(m => m.id === newMeeting.id);
-        if (!exists) {
-          return [...prev, newMeeting];
-        }
-        return prev;
+  // Booking form submission
+  const handleBookingSubmit = async (e) => {
+    e.preventDefault();
+    setBookingError(null);
+    setBookingSuccess(null);
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setBookingError('You must be logged in to book a meeting.');
+      return;
+    }
+
+    if (!formData.startTime || !formData.endTime) {
+      setBookingError('Start and End times are required.');
+      return;
+    }
+
+    const startUTC = new Date(`${selectedDate.toISOString().split('T')[0]}T${formData.startTime}`).toISOString();
+    const endUTC = new Date(`${selectedDate.toISOString().split('T')[0]}T${formData.endTime}`).toISOString();
+
+    const body = {
+      title: formData.title || 'Untitled',
+      agenda: formData.agenda || '',
+      startTime: startUTC,
+      endTime: endUTC,
+      status: 'Scheduled',
+      roomId: roomId
+    };
+
+    try {
+      const res = await fetch('https://localhost:7074/api/Meeting', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
       });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || 'Failed to book meeting.');
+      }
+
+      await res.json();
+      setBookingSuccess('Meeting booked successfully!');
+      setFormData({ title: '', agenda: '', startTime: '', endTime: '' });
+
+      fetchMeetings(); // Refresh timeline
+    } catch (err) {
+      setBookingError(err.message);
     }
   };
 
-  // Timeline rendering logic - only show blue divs for booked times
-  const renderTimelineSlots = (meetings) => {
-    return meetings.map((meeting, idx) => {
-      const start = new Date(meeting.startTime);
-      const end = new Date(meeting.endTime);
-      const startHour = start.getHours() + start.getMinutes() / 60;
-      const endHour = end.getHours() + end.getMinutes() / 60;
-      
-      // Timeline spans from 8 AM to 7 PM (12 hours)
-      const totalHours = 12;
-      const startTime = 8; // 8 AM
-      
-      // Calculate position and size
-      const leftPercent = Math.max(0, ((startHour - startTime) / totalHours) * 100);
-      const rightPercent = Math.min(100, ((endHour - startTime) / totalHours) * 100);
-      const widthPercent = rightPercent - leftPercent;
-      
-      // Only show blue div if meeting is within timeline range and room is booked
-      if (startHour >= startTime && startHour < startTime + totalHours && widthPercent > 0) {
-        return (
-          <div 
-            key={`meeting-${idx}-${meeting.id || idx}`} 
-            className="absolute top-0 h-full bg-blue-500"
-            style={{ 
-              left: `${leftPercent}%`, 
-              width: `${Math.max(widthPercent, 0.5)}%` // Minimum 0.5% width for visibility
-            }}
-            title={`Booked: ${start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`}
-          />
-        );
-      }
-      return null;
-    });
-  };
-
-  const renderMobileTimelineSlots = (meetings) => {
-    return meetings.map((meeting, idx) => {
-      const start = new Date(meeting.startTime);
-      const end = new Date(meeting.endTime);
-      const startHour = start.getHours() + start.getMinutes() / 60;
-      const endHour = end.getHours() + end.getMinutes() / 60;
-      
-      const totalHours = 12;
-      const startTime = 8;
-      
-      const topPercent = Math.max(0, ((startHour - startTime) / totalHours) * 100);
-      const bottomPercent = Math.min(100, ((endHour - startTime) / totalHours) * 100);
-      const heightPercent = bottomPercent - topPercent;
-      
-      // Only show blue div if meeting is within timeline range and room is booked
-      if (startHour >= startTime && startHour < startTime + totalHours && heightPercent > 0) {
-        return (
-          <div 
-            key={`mobile-meeting-${idx}-${meeting.id || idx}`} 
-            className="absolute left-0 w-full bg-blue-500"
-            style={{ 
-              top: `${topPercent}%`, 
-              height: `${Math.max(heightPercent, 1)}%` // Minimum 1% height for visibility
-            }}
-            title={`Booked: ${start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`}
-          />
-        );
-      }
-      return null;
-    });
-  };
-
-  if (loading) return <div className="flex justify-center items-center h-64"><p>Loading room info...</p></div>;
-  if (error) return <div className="flex justify-center items-center h-64"><p className="text-red-500">{error}</p></div>;
+  if (loading) return <p>Loading room info...</p>;
+  if (error) return <p className="text-red-500">{error}</p>;
 
   return (
     <>
       <Header />
 
-      {/* Hero Section */}
+      {/* Main Section */}
       <section className="relative md:h-[689px] h-[450px] w-full flex items-center justify-center" style={{ overflow: 'hidden', top: '-140px' }}>
         <div className="absolute inset-0 w-full h-full">
           <div className="bg-black absolute inset-0 z-10 opacity-50"></div>
-          <img src={roomImages[room?.name] || RoomImage} alt={room?.name} className="w-full h-full object-cover absolute inset-0"/>
+          <img src={roomImages[room?.name] || RoomImage} alt={room?.name} className="w-full h-full object-cover absolute inset-0" />
         </div>
         <div className="relative z-20 text-center text-white px-6 py-12 flex flex-col items-center justify-center mt-10 pt-20">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 drop-shadow-lg">{room?.name}</h1>
@@ -424,64 +382,64 @@ function RoomInfo() {
         </div>
       </section>
 
-      {/* Timeline Section */}
-      <section className="mt-12 px-6">
-        <h2 className="text-lg sm:text-2xl font-bold mb-4 flex flex-col sm:flex-row justify-center items-center gap-2 w-full">
-          <span className="block mb-2 sm:mb-0 text-base sm:text-xl">Timeline for</span>
+      <h1 className='text-[36px] sm:text-[60px] font-bold text-center text-[#111827] mb-10'>
+        Book a Meeting
+      </h1>
+
+      {/* Date Input */}
+      <section className="mt-8 px-6 max-w-xl mx-auto flex flex-col sm:flex-row justify-center items-center gap-4">
+        <label className="flex flex-col sm:flex-row items-center gap-2">
+          Select Date:
           <input
             type="date"
             value={selectedDate.toISOString().split('T')[0]}
             onChange={e => setSelectedDate(new Date(e.target.value))}
-            className="border px-2 py-1 rounded w-full sm:w-auto text-sm sm:text-base"
+            className="border px-2 py-1 rounded"
           />
-          {meetingsLoading && <span className="text-sm text-gray-500">Loading...</span>}
-        </h2>
+        </label>
+      </section>
 
+      {/* Timeline Section */}
+      <section className="mt-4 px-6">
         {/* Desktop Timeline */}
         <div className="hidden md:block relative border rounded-lg overflow-hidden bg-gray-100 max-w-5xl mx-auto h-20">
-          {/* Hour markers */}
           <div className="absolute inset-0 flex">
             {Array.from({ length: 12 }, (_, i) => (
               <div key={i} className="flex-1 border-l border-gray-300 relative first:border-l-0"></div>
             ))}
           </div>
-          
-          {/* Meeting slots */}
-          {renderTimelineSlots(meetings)}
-          
-          {/* Hour labels */}
+          {meetings.map((m, idx) => {
+            const start = m.startBeirut.getHours() + m.startBeirut.getMinutes() / 60;
+            const end = m.endBeirut.getHours() + m.endBeirut.getMinutes() / 60;
+            const totalHours = 11;
+            const leftPercent = ((start - 8) / totalHours) * 100;
+            const widthPercent = ((end - start) / totalHours) * 100;
+            return <div key={idx} className="absolute top-0 h-full bg-blue-500" style={{ left: `${leftPercent}%`, width: `${widthPercent}%` }}></div>;
+          })}
           <div className="absolute bottom-0 left-0 w-full flex justify-between px-1 text-xs text-gray-700">
-            {Array.from({ length: 12 }, (_, i) => (
-              <span key={i} className="text-center" style={{width: `${100/12}%`}}>
-                {8 + i}:00
-              </span>
-            ))}
+            {Array.from({ length: 11 }, (_, i) => <span key={i}>{8 + i}:00</span>)}
           </div>
         </div>
 
         {/* Mobile Timeline */}
         <div className="md:hidden relative border rounded-lg overflow-hidden bg-gray-100 max-w-2xl mx-auto h-[300px]">
-          {/* Hour markers */}
           <div className="absolute inset-0 flex flex-col">
             {Array.from({ length: 12 }, (_, i) => (
               <div key={i} className="flex-1 border-t border-gray-300 relative first:border-t-0"></div>
             ))}
           </div>
-          
-          {/* Meeting slots */}
-          {renderMobileTimelineSlots(meetings)}
-          
-          {/* Hour labels */}
-          <div className="absolute left-0 top-0 flex flex-col justify-between h-full py-1 text-xs text-gray-700">
-            {Array.from({ length: 12 }, (_, i) => (
-              <span key={i} className="text-center" style={{height: `${100/12}%`, display: 'flex', alignItems: 'center'}}>
-                {8 + i}:00
-              </span>
-            ))}
+          {meetings.map((m, idx) => {
+            const start = m.startBeirut.getHours() + m.startBeirut.getMinutes() / 60;
+            const end = m.endBeirut.getHours() + m.endBeirut.getMinutes() / 60;
+            const totalHours = 11;
+            const topPercent = ((start - 8) / totalHours) * 100;
+            const heightPercent = ((end - start) / totalHours) * 100;
+            return <div key={idx} className="absolute left-0 w-full bg-blue-500" style={{ top: `${topPercent}%`, height: `${heightPercent}%` }}></div>;
+          })}
+          <div className="absolute left-0 top-0 flex flex-col justify-between h-full px-1 text-xs text-gray-700">
+            {Array.from({ length: 11 }, (_, i) => <span key={i}>{8 + i}:00</span>)}
           </div>
         </div>
-
-
 
         {/* Legend */}
         <div className="mt-4 flex justify-center space-x-6 items-center">
@@ -506,6 +464,24 @@ function RoomInfo() {
             addMeeting={addMeeting}
           />
         </div>
+      </section>
+
+      {/* Booking Form */}
+      <section className="mt-8 px-6 max-w-xl mx-auto p-4 rounded-lg pb-20">
+        {bookingError && <p className="text-red-500 mb-2">{bookingError}</p>}
+        {bookingSuccess && <p className="text-green-500 mb-2">{bookingSuccess}</p>}
+
+        <form className="flex flex-col gap-3" onSubmit={handleBookingSubmit}>
+          <input type="text" placeholder="Title" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} className="border px-2 py-1 rounded" />
+          <input type="text" placeholder="Agenda" value={formData.agenda} onChange={e => setFormData({ ...formData, agenda: e.target.value })} className="border px-2 py-1 rounded" />
+          <label className="flex flex-col">Start Time:
+            <input type="time" value={formData.startTime} onChange={e => setFormData({ ...formData, startTime: e.target.value })} className="border px-2 py-1 rounded" />
+          </label>
+          <label className="flex flex-col">End Time:
+            <input type="time" value={formData.endTime} onChange={e => setFormData({ ...formData, endTime: e.target.value })} className="border px-2 py-1 rounded" />
+          </label>
+          <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">Book Meeting</button>
+        </form>
       </section>
 
       <Footer />
