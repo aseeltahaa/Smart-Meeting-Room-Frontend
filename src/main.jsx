@@ -13,7 +13,6 @@ import RoomRegister from './Pages/RoomRegister.jsx'
 import RoomInfo from './Pages/RoomInfo.jsx';
 import UpdateRoomPage from './Pages/UpdateRoomPage.jsx';
 
-
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 
 const router = createBrowserRouter([

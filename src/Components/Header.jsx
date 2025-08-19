@@ -106,7 +106,7 @@ function Header({ showSearchBar = false, showGradient = true }) {
               </Link>
             )}
             {isLoggedIn && isAdmin && (
-              <Link to="/AdminPanel" className={`${showGradient ? 'text-white' : 'text-black'} py-8 px-4 no-underline`}>
+              <Link to="/admin" className={`${showGradient ? 'text-white' : 'text-black'} py-8 px-4 no-underline`}>
                 Admin Panel
               </Link>
             )}
