@@ -1,4 +1,4 @@
-import {useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Header from '../Components/Header';
 import Footer from '../Components/Footer';
@@ -37,7 +37,7 @@ function RoomInfo() {
   const [bookingError, setBookingError] = useState(null);
   const [bookingSuccess, setBookingSuccess] = useState(null);
 
-  // Convert UTC → Beirut time for display
+  // Convert UTC → Beirut time
   const convertUTCToBeirut = (utcString) => {
     if (!utcString) return null;
     const utcDate = new Date(utcString);
@@ -63,7 +63,6 @@ function RoomInfo() {
       })
       .then(async data => {
         setRoom(data);
-
         const featurePromises = data.featureIds.map(id =>
           fetch(`https://localhost:7074/api/Features/${id}`, {
             headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
@@ -86,25 +85,37 @@ function RoomInfo() {
   // Fetch meetings for the room and selected date
   const fetchMeetings = () => {
     const token = localStorage.getItem('token');
+    if (!token) return;
+
     fetch('https://localhost:7074/api/Meeting', {
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
       .then(data => {
+        const startOfDay = new Date(selectedDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(selectedDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
         const roomMeetings = data
-          .filter(
-            m =>
-              m.roomId.toLowerCase() === roomId.toLowerCase() &&
-              convertUTCToBeirut(m.startTime)?.toDateString() === selectedDate.toDateString()
-          )
+          .filter(m => m.roomId.toLowerCase() === roomId.toLowerCase())
+          .filter(m => {
+            const meetingStart = convertUTCToBeirut(m.startTime);
+            const meetingEnd = convertUTCToBeirut(m.endTime);
+            return meetingEnd >= startOfDay && meetingStart <= endOfDay;
+          })
           .map(m => ({
             ...m,
             startBeirut: convertUTCToBeirut(m.startTime),
             endBeirut: convertUTCToBeirut(m.endTime),
           }));
+
         setMeetings(roomMeetings);
       })
-      .catch(err => console.error(err));
+      .catch(err => console.error('Error fetching meetings:', err));
   };
 
   useEffect(() => {
@@ -128,8 +139,8 @@ function RoomInfo() {
       return;
     }
 
-    const startUTC = new Date(formData.startTime).toISOString();
-    const endUTC = new Date(formData.endTime).toISOString();
+    const startUTC = new Date(`${selectedDate.toISOString().split('T')[0]}T${formData.startTime}`).toISOString();
+    const endUTC = new Date(`${selectedDate.toISOString().split('T')[0]}T${formData.endTime}`).toISOString();
 
     const body = {
       title: formData.title || 'Untitled',
@@ -155,12 +166,11 @@ function RoomInfo() {
         throw new Error(text || 'Failed to book meeting.');
       }
 
-      const newMeeting = await res.json();
+      await res.json();
       setBookingSuccess('Meeting booked successfully!');
       setFormData({ title: '', agenda: '', startTime: '', endTime: '' });
 
-      // Refetch all meetings to display the new one
-      fetchMeetings();
+      fetchMeetings(); // Refresh timeline
     } catch (err) {
       setBookingError(err.message);
     }
@@ -173,18 +183,11 @@ function RoomInfo() {
     <>
       <Header />
 
-      {/* Hero Section */}
-      <section
-        className="relative md:h-[689px] h-[450px] w-full flex items-center justify-center"
-        style={{ overflow: 'hidden', top: '-140px' }}
-      >
+      {/* Main Section */}
+      <section className="relative md:h-[689px] h-[450px] w-full flex items-center justify-center" style={{ overflow: 'hidden', top: '-140px' }}>
         <div className="absolute inset-0 w-full h-full">
           <div className="bg-black absolute inset-0 z-10 opacity-50"></div>
-          <img
-            src={roomImages[room?.name] || RoomImage}
-            alt={room?.name}
-            className="w-full h-full object-cover absolute inset-0"
-          />
+          <img src={roomImages[room?.name] || RoomImage} alt={room?.name} className="w-full h-full object-cover absolute inset-0" />
         </div>
         <div className="relative z-20 text-center text-white px-6 py-12 flex flex-col items-center justify-center mt-10 pt-20">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 drop-shadow-lg">{room?.name}</h1>
@@ -196,11 +199,11 @@ function RoomInfo() {
         </div>
       </section>
 
-      <h1 className="text-[28px] sm:text-[60px] font-bold text-center text-[#111827]">
+      <h1 className='text-[36px] sm:text-[60px] font-bold text-center text-[#111827] mb-10'>
         Book a Meeting
       </h1>
 
-      {/* Shared Date Input */}
+      {/* Date Input */}
       <section className="mt-8 px-6 max-w-xl mx-auto flex flex-col sm:flex-row justify-center items-center gap-4">
         <label className="flex flex-col sm:flex-row items-center gap-2">
           Select Date:
@@ -265,49 +268,20 @@ function RoomInfo() {
       </section>
 
       {/* Booking Form */}
-      <section className="mt-8 px-6 max-w-xl mx-auto p-4 rounded-lg py-20">
+      <section className="mt-8 px-6 max-w-xl mx-auto p-4 rounded-lg pb-20">
         {bookingError && <p className="text-red-500 mb-2">{bookingError}</p>}
         {bookingSuccess && <p className="text-green-500 mb-2">{bookingSuccess}</p>}
 
         <form className="flex flex-col gap-3" onSubmit={handleBookingSubmit}>
-          <input
-            type="text"
-            placeholder="Title"
-            value={formData.title}
-            onChange={e => setFormData({ ...formData, title: e.target.value })}
-            className="border px-2 py-1 rounded"
-          />
-          <input
-            type="text"
-            placeholder="Agenda"
-            value={formData.agenda}
-            onChange={e => setFormData({ ...formData, agenda: e.target.value })}
-            className="border px-2 py-1 rounded"
-          />
-          <label className="flex flex-col">
-            Start Time:
-            <input
-              type="datetime-local"
-              value={formData.startTime}
-              onChange={e => setFormData({ ...formData, startTime: e.target.value })}
-              className="border px-2 py-1 rounded"
-            />
+          <input type="text" placeholder="Title" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} className="border px-2 py-1 rounded" />
+          <input type="text" placeholder="Agenda" value={formData.agenda} onChange={e => setFormData({ ...formData, agenda: e.target.value })} className="border px-2 py-1 rounded" />
+          <label className="flex flex-col">Start Time:
+            <input type="time" value={formData.startTime} onChange={e => setFormData({ ...formData, startTime: e.target.value })} className="border px-2 py-1 rounded" />
           </label>
-          <label className="flex flex-col">
-            End Time:
-            <input
-              type="datetime-local"
-              value={formData.endTime}
-              onChange={e => setFormData({ ...formData, endTime: e.target.value })}
-              className="border px-2 py-1 rounded"
-            />
+          <label className="flex flex-col">End Time:
+            <input type="time" value={formData.endTime} onChange={e => setFormData({ ...formData, endTime: e.target.value })} className="border px-2 py-1 rounded" />
           </label>
-          <button
-            type="submit"
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
-          >
-            Book Meeting
-          </button>
+          <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">Book Meeting</button>
         </form>
       </section>
 
@@ -316,4 +290,4 @@ function RoomInfo() {
   );
 }
 
-export default RoomInfo; 
+export default RoomInfo;
