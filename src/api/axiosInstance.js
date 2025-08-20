@@ -1,15 +1,13 @@
 import axios from 'axios';
 
 const instance = axios.create({
-  baseURL: 'https://localhost:7074/api', // ✅ matches backend
+  baseURL: 'https://localhost:7074/api',
   headers: {
     'Content-Type': 'application/json',
   },
-  // ✅ include credentials if your API uses cookies or Identity sessions
-  withCredentials: false, // set to true only if backend sets cookies
+  withCredentials: false,
 });
 
-// Optional: set token automatically if stored in localStorage
 instance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
