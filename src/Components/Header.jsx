@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import logo from '../assets/logo.png';
 import RoomSearchBar from './RoomSearchBar';
-import api from '../api/axiosInstance'; // Adjust path as needed
+import api from '../api/axiosInstance';
 
 function Header({ showSearchBar = false, showGradient = true }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -20,20 +20,12 @@ function Header({ showSearchBar = false, showGradient = true }) {
 
     try {
       setIsLoadingRole(true);
-      
-      // Get user ID from token or localStorage
-      // You might need to decode the JWT token to get the user ID
-      // For now, I'll show how to get it from localStorage or decode token
       const token = localStorage.getItem('token');
-      
-      // Option 1: If you store userId separately in localStorage
       let userId = localStorage.getItem('userId');
-      
-      // Option 2: If you need to decode the JWT token to get the user ID
       if (!userId && token) {
         try {
           const tokenPayload = JSON.parse(atob(token.split('.')[1]));
-          userId = tokenPayload.sub; // 'sub' claim contains the user ID
+          userId = tokenPayload.sub;
         } catch (error) {
           console.error('Error decoding token:', error);
           return;
@@ -47,13 +39,9 @@ function Header({ showSearchBar = false, showGradient = true }) {
 
       const response = await api.get(`/Users/${userId}`);
       const userData = response.data;
-      
-      // Check if user has Admin role
       const hasAdminRole = userData.roles && userData.roles.includes('Admin');
-      
       setIsAdmin(hasAdminRole);
       
-      // Store in localStorage for future use
       localStorage.setItem('isAdmin', hasAdminRole.toString());
       
     } catch (error) {
@@ -64,17 +52,12 @@ function Header({ showSearchBar = false, showGradient = true }) {
       setIsLoadingRole(false);
     }
   };
-
-  // Fetch role when component mounts or login status changes
   useEffect(() => {
     if (isLoggedIn) {
-      // First check if we have a stored role to avoid unnecessary API calls
       const storedRole = localStorage.getItem('isAdmin');
       if (storedRole !== null) {
         setIsAdmin(storedRole === 'true');
       }
-      
-      // Fetch fresh role data
       fetchUserRole();
     } else {
       setIsAdmin(false);
@@ -118,11 +101,19 @@ function Header({ showSearchBar = false, showGradient = true }) {
 
         <div className="hidden md:flex items-center gap-4 relative">
           {showSearchBar && <RoomSearchBar />}
-          <Link to="/Login">
-            <button className="border-none rounded-full py-3 px-5 text-lg cursor-pointer bg-[#539D98] hover:bg-[#437e79] transition-colors duration-300 ease-in-out text-white">
-              Login
-            </button>
-          </Link>
+          {isLoggedIn ? (
+            <Link to="/profile">
+              <button className="border-none rounded-full py-3 px-5 text-lg cursor-pointer bg-[#539D98] hover:bg-[#437e79] transition-colors duration-300 ease-in-out text-white">
+                Profile
+              </button>
+            </Link>
+          ) : (
+            <Link to="/Login">
+              <button className="border-none rounded-full py-3 px-5 text-lg cursor-pointer bg-[#539D98] hover:bg-[#437e79] transition-colors duration-300 ease-in-out text-white">
+                Login
+              </button>
+            </Link>
+          )}
         </div>
 
         {/* Burger menu icon */}
@@ -148,8 +139,11 @@ function Header({ showSearchBar = false, showGradient = true }) {
               </Link>
             )}
             <Link to="/AboutUs" className="text-xl" onClick={() => setMenuOpen(false)}>About Us</Link>
-            <Link to="/Login" className="text-xl" onClick={() => setMenuOpen(false)}>Login</Link>
-            <Link to="/profile" className="text-xl" onClick={() => setMenuOpen(false)}>Profile</Link>
+            {isLoggedIn ? (
+              <Link to="/profile" className="text-xl" onClick={() => setMenuOpen(false)}>Profile</Link>
+            ) : (
+              <Link to="/Login" className="text-xl" onClick={() => setMenuOpen(false)}>Login</Link>
+            )}
           </nav>
 
           {/* Close button */}

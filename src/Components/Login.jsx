@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import heroImage from '../assets/login.jpg';
 import axios from '../api/axiosInstance'; 
 import './Login.css';
+import { useNavigate } from 'react-router-dom';
 
 function Login() {
   const [focusedInput, setFocusedInput] = useState('');
@@ -12,6 +13,7 @@ function Login() {
 
   const handleFocus = (inputName) => setFocusedInput(inputName);
   const handleBlur = () => setFocusedInput('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,10 +21,8 @@ function Login() {
     setLoading(true);
 
     try {
-      // Ensure the full backend URL is used or configured in axiosInstance
       const res = await axios.post('/Auth/login', { email, password });
 
-      // Save JWT and user info
       localStorage.setItem('token', res.data.token);
       localStorage.setItem(
         'user',
@@ -33,23 +33,12 @@ function Login() {
         })
       );
 
-      // Set default Authorization header for future requests
       axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
-
-      // Redirect to dashboard
-      window.location.href = '/';
+      navigate('/profile');
     } catch (err) {
-      // Handle both network errors and API errors
-      if (err.response) {
-        // Server responded with a status outside 2xx
-        setError(err.response.data?.message || 'Invalid email or password');
-      } else if (err.request) {
-        // Request was made but no response
-        setError('Server did not respond. Please try again later.');
-      } else {
-        // Something else
-        setError('An error occurred. Please try again.');
-      }
+      if (err.response) setError(err.response.data?.message || 'Invalid email or password');
+      else if (err.request) setError('Server did not respond. Please try again later.');
+      else setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
