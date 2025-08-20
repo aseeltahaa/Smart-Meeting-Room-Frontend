@@ -1,3 +1,10 @@
+// Convert UTC to Beirut time
+const convertUTCToBeirut = (utcString) => {
+  if (!utcString) return null;
+  const utcDate = new Date(utcString);
+  const beirutOffset = 3 * 60; // +3 hours
+  return new Date(utcDate.getTime() + beirutOffset * 60 * 1000);
+};
 import React, { useState, useEffect } from "react";
 import {
   FaCalendarAlt as Calendar,
@@ -14,19 +21,21 @@ import axios from "../api/axiosInstance";
 // Meeting Card Component
 const MeetingCard = ({ meeting, onView, onEdit, isOrganized }) => {
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+    const beirutDate = convertUTCToBeirut(dateString);
+    return beirutDate ? beirutDate.toLocaleDateString("en-US", {
       weekday: "short",
       year: "numeric",
       month: "short",
       day: "numeric",
-    });
+    }) : "";
   };
 
   const formatTime = (dateString) => {
-    return new Date(dateString).toLocaleTimeString("en-US", {
+    const beirutDate = convertUTCToBeirut(dateString);
+    return beirutDate ? beirutDate.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
-    });
+    }) : "";
   };
 
   const getStatusColor = (status) => {
@@ -124,11 +133,7 @@ const MeetingsManager = () => {
   const fetchUserMeetings = async () => {
     try {
       setLoading(true);
-      const userId =
-        localStorage.getItem("userId") ||
-        "CDB92B36-A923-4AAC-D7DE-08DDDBDAEEFE";
-
-      const response = await axios.get(`/Users/${userId}`);
+      const response = await axios.get(`/Users/me`);
       setUserData(response.data);
       setError(null);
     } catch (err) {
