@@ -13,7 +13,7 @@ import Room301 from '../assets/rooms/room301.jpg';
 import Room302 from '../assets/rooms/room302.jpg';
 import Room401 from '../assets/rooms/room401.jpg';
 
-//testtt
+// Room images mapping
 const roomImages = {
   'Room 101': Room101,
   'Room 102': Room102,
@@ -35,6 +35,9 @@ function RoomInfo() {
 
   // Form state
   const [formData, setFormData] = useState({ title: '', agenda: '', startTime: '', endTime: '' });
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrencePattern, setRecurrencePattern] = useState('Daily');
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
   const [bookingError, setBookingError] = useState(null);
   const [bookingSuccess, setBookingSuccess] = useState(null);
 
@@ -143,17 +146,35 @@ function RoomInfo() {
     const startUTC = new Date(selectedDate.toISOString().split('T')[0] + 'T' + formData.startTime).toISOString();
     const endUTC = new Date(selectedDate.toISOString().split('T')[0] + 'T' + formData.endTime).toISOString();
 
-    const body = {
-      title: formData.title || 'Untitled',
-      agenda: formData.agenda || '',
-      startTime: startUTC,
-      endTime: endUTC,
-      status: 'Scheduled',
-      roomId: roomId
-    };
-
     try {
-      const res = await fetch('https://localhost:7074/api/Meeting', {
+      let url = 'https://localhost:7074/api/Meeting';
+      let body = {
+        title: formData.title || 'Untitled',
+        agenda: formData.agenda || '',
+        startTime: startUTC,
+        endTime: endUTC,
+        status: 'Scheduled',
+        roomId: roomId
+      };
+
+      if (isRecurring) {
+        if (!recurrenceEndDate) {
+          setBookingError('Please select a recurrence end date.');
+          return;
+        }
+        url = 'https://localhost:7074/api/Meeting/recurring';
+        body = {
+          roomId: roomId,
+          title: formData.title || 'Untitled',
+          agenda: formData.agenda || '',
+          startTime: startUTC,
+          endTime: endUTC,
+          recurrencePattern,
+          recurrenceEndDate: new Date(recurrenceEndDate).toISOString()
+        };
+      }
+
+      const res = await fetch(url, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -170,6 +191,9 @@ function RoomInfo() {
       await res.json();
       setBookingSuccess('Meeting booked successfully!');
       setFormData({ title: '', agenda: '', startTime: '', endTime: '' });
+      setIsRecurring(false);
+      setRecurrencePattern('Daily');
+      setRecurrenceEndDate('');
 
       fetchMeetings(); // Refresh timeline
     } catch (err) {
@@ -184,7 +208,7 @@ function RoomInfo() {
     <>
       <Header />
 
-      {/* Main Section */}
+      {/* Room Header Section */}
       <section className="relative md:h-[689px] h-[450px] w-full flex items-center justify-center" style={{ overflow: 'hidden', top: '-140px' }}>
         <div className="absolute inset-0 w-full h-full">
           <div className="bg-black absolute inset-0 z-10 opacity-50"></div>
@@ -200,6 +224,7 @@ function RoomInfo() {
         </div>
       </section>
 
+      {/* Booking Section Header */}
       <h1 className='text-[36px] sm:text-[60px] font-bold text-center text-[#111827] mb-10'>
         Book a Meeting
       </h1>
@@ -218,8 +243,8 @@ function RoomInfo() {
       </section>
 
       {/* Timeline Section */}
+      {/* Desktop Timeline */}
       <section className="mt-4 px-6">
-        {/* Desktop Timeline */}
         <div className="hidden md:block relative border rounded-lg overflow-hidden bg-gray-100 max-w-5xl mx-auto h-20">
           <div className="absolute inset-0 flex">
             {Array.from({ length: 11 }, (_, i) => (
@@ -282,6 +307,35 @@ function RoomInfo() {
           <label className="flex flex-col">End Time:
             <input type="time" value={formData.endTime} onChange={e => setFormData({ ...formData, endTime: e.target.value })} className="border px-2 py-1 rounded" />
           </label>
+
+          {/* Recurrence */}
+          <div className="flex items-center gap-4 mt-2">
+            <span>Recurring?</span>
+            <label className="flex items-center gap-1">
+              <input type="radio" name="recurring" checked={isRecurring} onChange={() => setIsRecurring(true)} /> Yes
+            </label>
+            <label className="flex items-center gap-1">
+              <input type="radio" name="recurring" checked={!isRecurring} onChange={() => setIsRecurring(false)} /> No
+            </label>
+          </div>
+
+          {isRecurring && (
+            <div className="flex flex-col gap-2 mt-2">
+              <label className="flex flex-col">
+                Recurrence Pattern:
+                <select value={recurrencePattern} onChange={e => setRecurrencePattern(e.target.value)} className="border px-2 py-1 rounded">
+                  <option value="Daily">Daily</option>
+                  <option value="Weekly">Weekly</option>
+                  <option value="Monthly">Monthly</option>
+                </select>
+              </label>
+              <label className="flex flex-col">
+                Recurrence End Date:
+                <input type="date" value={recurrenceEndDate} onChange={e => setRecurrenceEndDate(e.target.value)} className="border px-2 py-1 rounded" />
+              </label>
+            </div>
+          )}
+
           <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">Book Meeting</button>
         </form>
       </section>
