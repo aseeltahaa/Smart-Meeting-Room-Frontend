@@ -143,7 +143,8 @@ const MeetingsManager = () => {
       setLoading(false);
     }
   };
-
+console.log("User Data:", userData);
+  
   const handleView = (meetingId) => {
     navigate(`/meetings/view/${meetingId}`);
   };
