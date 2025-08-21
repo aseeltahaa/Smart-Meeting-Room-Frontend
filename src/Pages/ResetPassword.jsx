@@ -1,31 +1,30 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import heroImage from '../assets/login.jpg';
-import logo from '../assets/logo.png';
-import axios from '../api/axiosInstance';
 import { useNavigate } from 'react-router-dom';
+import heroImage from '../assets/login.jpg';
+import axios from '../api/axiosInstance';
 
 function ResetPassword() {
   const [focusedInput, setFocusedInput] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState([]);
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const navigate = useNavigate();
+
   const handleFocus = (inputName) => setFocusedInput(inputName);
   const handleBlur = () => setFocusedInput('');
-  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setErrors([]);
     setSuccess('');
     setLoading(true);
 
     if (newPassword !== confirmNewPassword) {
-      setError('New passwords do not match');
+      setErrors(['New passwords do not match']);
       setLoading(false);
       return;
     }
@@ -37,14 +36,33 @@ function ResetPassword() {
         { currentPassword, newPassword, confirmNewPassword },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
       setSuccess(res.data || 'Password changed successfully.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
+      setErrors([]);
     } catch (err) {
-      if (err.response) setError(err.response.data || 'Error changing password');
-      else if (err.request) setError('Server did not respond. Please try again later.');
-      else setError('An error occurred. Please try again.');
+      const apiError = err.response?.data;
+      let newErrors = [];
+
+      if (!apiError) {
+        newErrors = ['Failed to change password. Please try again.'];
+      } else if (typeof apiError === 'string') {
+        newErrors = [apiError];
+      } else if (apiError.message) {
+        newErrors = [apiError.message];
+      } else if (Array.isArray(apiError)) {
+        // Handle array of errors [{code, description}, ...]
+        newErrors = apiError.map((e) => e.description || JSON.stringify(e));
+      } else if (Array.isArray(apiError.errors)) {
+        newErrors = apiError.errors.map((e) => e.description || JSON.stringify(e));
+      } else {
+        newErrors = [JSON.stringify(apiError)];
+      }
+
+      setErrors(newErrors);
+      console.error('Error changing password:', err);
     } finally {
       setLoading(false);
     }
@@ -67,9 +85,23 @@ function ResetPassword() {
         >
           <h1 className="text-2xl font-bold text-center mb-1">Change Password</h1>
 
-          {/* Messages */}
-          {error && <p className="text-red-500 text-center">{error}</p>}
-          {success && <p className="text-green-400 text-center">{success}</p>}
+          {/* Error messages */}
+          {errors.length > 0 && (
+            <div className="bg-red-50 border border-red-400 text-red-700 p-3 rounded">
+              <ul className="list-disc list-inside space-y-1">
+                {errors.map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Success message */}
+          {success && (
+            <p className="text-green-600 font-semibold border border-green-400 bg-green-50 p-2 rounded">
+              {success}
+            </p>
+          )}
 
           {/* Current Password */}
           <div
