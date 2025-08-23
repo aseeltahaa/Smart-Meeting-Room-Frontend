@@ -238,14 +238,6 @@ const MeetingsManager = () => {
   ) : (
     <div className="min-h-screen bg-white py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* User Info */}
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold">
-            {userData?.firstName} {userData?.lastName}
-          </h1>
-          <p className="text-gray-600">Roles: {userData?.roles?.join(", ")}</p>
-        </div>
-
         {/* Organized Meetings Section */}
         <MeetingsSection
           title="My Organized Meetings"

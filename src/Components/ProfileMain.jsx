@@ -1,20 +1,40 @@
 import React, { useEffect, useState } from "react";
 import defaultPfp from "../assets/defaultPfp.png";
-import { FiLogOut } from "react-icons/fi";
-import { FiKey } from "react-icons/fi";
+import { FiLogOut, FiKey } from "react-icons/fi";
+import axios from "../api/axiosInstance";
 
 function ProfileMain() {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) setUser(JSON.parse(storedUser));
+    const fetchUser = async () => {
+      try {
+        setLoading(true);
+        const res = await axios.get("/Users/me");
+        setUser(res.data);
+        localStorage.setItem("user", JSON.stringify(res.data)); // optional cache
+        setError(null);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to fetch user info.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
   }, []);
 
-  if (!user) return <p>Loading...</p>;
+  if (loading) return <p className="text-center mt-10">Loading...</p>;
+  if (error) return <p className="text-center mt-10 text-red-500">{error}</p>;
 
   return (
-    <div className="flex flex-col md:flex-row justify-start px-6 py-10 mx-auto w-full max-w-full overflow-x-hidden relative" style={{top: '-25px'}}>
+    <div
+      className="flex flex-col md:flex-row justify-start px-6 py-10 mx-auto w-full max-w-full overflow-x-hidden relative"
+      style={{ top: "-25px" }}
+    >
       {/* Profile Picture */}
       <img
         src={defaultPfp}
@@ -31,22 +51,26 @@ function ProfileMain() {
           <span className="font-semibold">Email:</span> {user.email}
         </p>
 
+        <p className="text-gray-600">
+          Roles: {user.roles?.length > 0 ? user.roles.join(", ") : "No roles assigned"}
+        </p>
+
         <div className="mt-6 flex flex-col md:flex-row gap-4 w-full">
           {/* Logout Button */}
-                  <button
-                    className="w-full md:flex-1 text-white py-2 rounded-lg flex items-center justify-center gap-2"
-                    style={{ backgroundColor: '#539D98' }}
-                    onMouseOver={e => e.target.style.backgroundColor = '#4A8A85'}
-                    onMouseOut={e => e.target.style.backgroundColor = '#539D98'}
-                    onClick={() => {
-                      localStorage.removeItem("token");
-                      localStorage.removeItem("user");
-                      window.location.href = "/login";
-                    }}
-                  >
-                    <FiLogOut size={20} />
-                    Logout
-                  </button>
+          <button
+            className="w-full md:flex-1 text-white py-2 rounded-lg flex items-center justify-center gap-2"
+            style={{ backgroundColor: "#539D98" }}
+            onMouseOver={(e) => (e.target.style.backgroundColor = "#4A8A85")}
+            onMouseOut={(e) => (e.target.style.backgroundColor = "#539D98")}
+            onClick={() => {
+              localStorage.removeItem("token");
+              localStorage.removeItem("user");
+              window.location.href = "/login";
+            }}
+          >
+            <FiLogOut size={20} />
+            Logout
+          </button>
 
           {/* Reset Password Button */}
           <button
