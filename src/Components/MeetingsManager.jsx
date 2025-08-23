@@ -1,10 +1,3 @@
-// Convert UTC to Beirut time
-const convertUTCToBeirut = (utcString) => {
-  if (!utcString) return null;
-  const utcDate = new Date(utcString);
-  const beirutOffset = 3 * 60; // +3 hours
-  return new Date(utcDate.getTime() + beirutOffset * 60 * 1000);
-};
 import React, { useState, useEffect } from "react";
 import {
   FaCalendarAlt as Calendar,
@@ -18,24 +11,36 @@ import {
 import { useNavigate } from "react-router-dom";
 import axios from "../api/axiosInstance";
 
+// Convert UTC → Beirut time
+const convertUTCToBeirut = (utcString) => {
+  if (!utcString) return null;
+  const utcDate = new Date(utcString);
+  const beirutOffset = 3 * 60; // +3 hours
+  return new Date(utcDate.getTime() + beirutOffset * 60 * 1000);
+};
+
 // Meeting Card Component
 const MeetingCard = ({ meeting, onView, onEdit, isOrganized }) => {
   const formatDate = (dateString) => {
     const beirutDate = convertUTCToBeirut(dateString);
-    return beirutDate ? beirutDate.toLocaleDateString("en-US", {
-      weekday: "short",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    }) : "";
+    return beirutDate
+      ? beirutDate.toLocaleDateString("en-US", {
+          weekday: "short",
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        })
+      : "";
   };
 
   const formatTime = (dateString) => {
     const beirutDate = convertUTCToBeirut(dateString);
-    return beirutDate ? beirutDate.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    }) : "";
+    return beirutDate
+      ? beirutDate.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "";
   };
 
   const getStatusColor = (status) => {
@@ -103,12 +108,8 @@ const MeetingCard = ({ meeting, onView, onEdit, isOrganized }) => {
             onClick={() => onEdit(meeting.id)}
             className="flex-1 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2"
             style={{ backgroundColor: "#539D98" }}
-            onMouseOver={(e) =>
-              (e.target.style.backgroundColor = "#4A8A85")
-            }
-            onMouseOut={(e) =>
-              (e.target.style.backgroundColor = "#539D98")
-            }
+            onMouseOver={(e) => (e.target.style.backgroundColor = "#4A8A85")}
+            onMouseOut={(e) => (e.target.style.backgroundColor = "#539D98")}
           >
             <Edit className="h-4 w-4" />
             Edit
@@ -119,32 +120,87 @@ const MeetingCard = ({ meeting, onView, onEdit, isOrganized }) => {
   );
 };
 
-// Main Meetings Dashboard Component
+// Main Meetings Manager Component
 const MeetingsManager = () => {
   const [userData, setUserData] = useState(null);
+  const [organizedMeetings, setOrganizedMeetings] = useState([]);
+  const [invitedMeetings, setInvitedMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Pagination
+  const [organizedPage, setOrganizedPage] = useState(1);
+  const [invitedPage, setInvitedPage] = useState(1);
+  const pageSize = 3;
+
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchUserMeetings();
+    fetchUserData();
   }, []);
 
-  const fetchUserMeetings = async () => {
+  useEffect(() => {
+    if (userData) {
+      fetchOrganizedMeetings();
+      fetchInvitedMeetings();
+    }
+  }, [userData, organizedPage, invitedPage]);
+
+  // Fetch user info
+  const fetchUserData = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/Users/me`);
-      setUserData(response.data);
+      const res = await axios.get("/Users/me");
+      setUserData(res.data);
       setError(null);
     } catch (err) {
-      setError("Failed to fetch meetings. Please try again.");
-      console.error("Error fetching meetings:", err);
+      console.error(err);
+      setError("Failed to fetch user info.");
     } finally {
       setLoading(false);
     }
   };
-console.log("User Data:", userData);
-  
+
+  // Fetch organized meetings
+  const fetchOrganizedMeetings = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get(
+        `/Users/me/meetings/organized?page=${organizedPage}&pageSize=${pageSize}`
+      );
+      const now = new Date();
+      const upcoming = res.data
+        .filter((m) => new Date(m.startTime) >= now)
+        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+      setOrganizedMeetings(upcoming);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to fetch organized meetings.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch invited meetings
+  const fetchInvitedMeetings = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get(
+        `/Users/me/meetings/invited?page=${invitedPage}&pageSize=${pageSize}`
+      );
+      const now = new Date();
+      const upcoming = res.data
+        .filter((m) => new Date(m.startTime) >= now)
+        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+      setInvitedMeetings(upcoming);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to fetch invited meetings.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleView = (meetingId) => {
     navigate(`/meetings/view/${meetingId}`);
   };
@@ -153,136 +209,135 @@ console.log("User Data:", userData);
     navigate(`/meetings/edit/${meetingId}`);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div
-            className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4"
-            style={{ borderColor: "#539D98" }}
-          ></div>
-          <p className="text-gray-600">Loading meetings...</p>
-        </div>
+  return loading ? (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div
+          className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4"
+          style={{ borderColor: "#539D98" }}
+        ></div>
+        <p className="text-gray-600">Loading meetings...</p>
       </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto px-4">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            Something went wrong
-          </h2>
-          <p className="text-red-600 mb-4">{error}</p>
-          <button
-            onClick={fetchUserMeetings}
-            className="text-white px-6 py-2 rounded-md font-medium transition-colors"
-            style={{ backgroundColor: "#539D98" }}
-            onMouseOver={(e) =>
-              (e.target.style.backgroundColor = "#4A8A85")
-            }
-            onMouseOut={(e) =>
-              (e.target.style.backgroundColor = "#539D98")
-            }
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
+    </div>
+  ) : error ? (
+    <div className="min-h-screen flex items-center justify-center text-center">
+      <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+      <h2 className="text-xl font-semibold text-gray-900 mb-2">Something went wrong</h2>
+      <p className="text-red-600 mb-4">{error}</p>
+      <button
+        onClick={() => {
+          fetchUserData();
+          fetchOrganizedMeetings();
+          fetchInvitedMeetings();
+        }}
+        className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-2 rounded-md font-medium"
+      >
+        Try Again
+      </button>
+    </div>
+  ) : (
     <div className="min-h-screen bg-white py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Organized Meetings Section */}
-        <div className="mb-12">
-          <div className="flex items-center gap-3 mb-6">
-            <Users className="h-6 w-6 text-blue-600" />
-            <h2 className="text-2xl font-semibold text-gray-900">
-              My Organized Meetings
-            </h2>
-            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-              {userData?.organizedMeetings?.length || 0}
-            </span>
-          </div>
-
-          {!userData?.organizedMeetings ||
-          userData.organizedMeetings.length === 0 ? (
-            <div className="bg-gray-100 rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-              <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No organized meetings
-              </h3>
-              <p className="text-gray-500">
-                You haven't created any meetings yet
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {userData.organizedMeetings.map((meeting) => (
-                <MeetingCard
-                  key={meeting.id}
-                  meeting={meeting}
-                  onView={handleView}
-                  onEdit={handleEdit}
-                  isOrganized={true}
-                />
-              ))}
-            </div>
-          )}
+        {/* User Info */}
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold">
+            {userData?.firstName} {userData?.lastName}
+          </h1>
+          <p className="text-gray-600">Roles: {userData?.roles?.join(", ")}</p>
         </div>
+
+        {/* Organized Meetings Section */}
+        <MeetingsSection
+          title="My Organized Meetings"
+          icon={Users}
+          meetings={organizedMeetings}
+          page={organizedPage}
+          setPage={setOrganizedPage}
+          handleView={handleView}
+          handleEdit={handleEdit}
+          isOrganized
+        />
 
         {/* Invited Meetings Section */}
-        <div>
-          <div className="flex items-center gap-3 mb-6">
-            <MapPin className="h-6 w-6 text-green-600" />
-            <h2 className="text-2xl font-semibold text-gray-900">
-              Meetings I'm Invited To
-            </h2>
-            <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-              {userData?.invitedMeetings?.length || 0}
-            </span>
-          </div>
-
-          {!userData?.invitedMeetings ||
-          userData.invitedMeetings.length === 0 ? (
-            <div className="bg-gray-100 rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No meeting invitations
-              </h3>
-              <p className="text-gray-500">
-                You haven't been invited to any meetings yet
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {userData.invitedMeetings.map((meeting) => (
-                <MeetingCard
-                  key={meeting.id}
-                  meeting={meeting}
-                  onView={handleView}
-                  onEdit={null}
-                  isOrganized={false}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Refresh Button */}
-        <div className="mt-8 text-center">
-          <button
-            onClick={fetchUserMeetings}
-            className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-2 rounded-md border border-gray-300 font-medium transition-colors"
-          >
-            Refresh Meetings
-          </button>
-        </div>
+        <MeetingsSection
+          title="Meetings I'm Invited To"
+          icon={MapPin}
+          meetings={invitedMeetings}
+          page={invitedPage}
+          setPage={setInvitedPage}
+          handleView={handleView}
+          handleEdit={null}
+          isOrganized={false}
+        />
       </div>
+    </div>
+  );
+};
+
+// Reusable section component
+const MeetingsSection = ({
+  title,
+  icon: Icon,
+  meetings,
+  page,
+  setPage,
+  handleView,
+  handleEdit,
+  isOrganized,
+}) => {
+  const pageSize = 3;
+
+  return (
+    <div className="mb-12">
+      <div className="flex items-center gap-3 mb-6">
+        <Icon className="h-6 w-6 text-blue-600" />
+        <h2 className="text-2xl font-semibold text-gray-900">{title}</h2>
+        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+          {meetings.length}
+        </span>
+      </div>
+
+      {meetings.length === 0 ? (
+        <div className="bg-gray-100 rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+          <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No meetings
+          </h3>
+          <p className="text-gray-500">
+            {isOrganized ? "You haven't created any meetings yet" : "You haven't been invited to any meetings yet"}
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {meetings.map((meeting) => (
+              <MeetingCard
+                key={meeting.id}
+                meeting={meeting}
+                onView={handleView}
+                onEdit={handleEdit}
+                isOrganized={isOrganized}
+              />
+            ))}
+          </div>
+          <div className="flex justify-between mt-4">
+            <button
+              onClick={() => setPage(Math.max(page - 1, 1))}
+              disabled={page === 1}
+              className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setPage(page + 1)}
+              disabled={meetings.length < pageSize}
+              className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200"
+            >
+              Next
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 };
