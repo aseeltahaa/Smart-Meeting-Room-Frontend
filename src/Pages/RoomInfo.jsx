@@ -41,12 +41,22 @@ function RoomInfo() {
   const [bookingError, setBookingError] = useState(null);
   const [bookingSuccess, setBookingSuccess] = useState(null);
 
-  // Convert UTC → Beirut time
+  const apiOrigin = 'https://localhost:7074';
+
   const convertUTCToBeirut = (utcString) => {
     if (!utcString) return null;
     const utcDate = new Date(utcString);
     const beirutOffset = 3 * 60; // +3 hours
     return new Date(utcDate.getTime() + beirutOffset * 60 * 1000);
+  };
+
+  const resolveRoomImage = () => {
+    if (room?.imageUrl) {
+      if (/^https?:\/\//i.test(room.imageUrl)) return room.imageUrl;
+      const path = room.imageUrl.startsWith('/') ? room.imageUrl : `/${room.imageUrl}`;
+      return `${apiOrigin}${path}`;
+    }
+    return roomImages[room?.name] || RoomImage;
   };
 
   // Fetch room info
@@ -58,60 +68,59 @@ function RoomInfo() {
       return;
     }
 
-    fetch(`https://localhost:7074/api/Room/${roomId}`, {
-      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+    fetch(`${apiOrigin}/api/Room/${roomId}`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
     })
-      .then(res => {
+      .then((res) => {
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         return res.json();
       })
-      .then(async data => {
+      .then(async (data) => {
         setRoom(data);
-        const featurePromises = data.featureIds.map(id =>
-          fetch(`https://localhost:7074/api/Features/${id}`, {
-            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+        const featurePromises = data.featureIds.map((id) =>
+          fetch(`${apiOrigin}/api/Features/${id}`, {
+            headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
           })
-            .then(res => (res.ok ? res.json() : null))
+            .then((res) => (res.ok ? res.json() : null))
             .catch(() => null)
         );
-
         const featureData = await Promise.all(featurePromises);
-        setFeatures(featureData.filter(f => f).map(f => f.name));
+        setFeatures(featureData.filter((f) => f).map((f) => f.name));
         setLoading(false);
       })
-      .catch(err => {
+      .catch((err) => {
         console.error('Error fetching room info:', err);
         setError('Failed to fetch room info.');
         setLoading(false);
       });
   }, [roomId]);
 
-  // Fetch meetings for the room and selected date
+  // Fetch meetings
   const fetchMeetings = () => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    fetch('https://localhost:7074/api/Meeting', {
-      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+    fetch(`${apiOrigin}/api/Meeting`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
     })
-      .then(res => {
+      .then((res) => {
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         return res.json();
       })
-      .then(data => {
+      .then((data) => {
         const startOfDay = new Date(selectedDate);
         startOfDay.setHours(0, 0, 0, 0);
         const endOfDay = new Date(selectedDate);
         endOfDay.setHours(23, 59, 59, 999);
 
         const roomMeetings = data
-          .filter(m => m.roomId.toLowerCase() === roomId.toLowerCase())
-          .filter(m => {
+          .filter((m) => m.roomId.toLowerCase() === roomId.toLowerCase())
+          .filter((m) => {
             const meetingStart = convertUTCToBeirut(m.startTime);
             const meetingEnd = convertUTCToBeirut(m.endTime);
             return meetingEnd >= startOfDay && meetingStart <= endOfDay;
           })
-          .map(m => ({
+          .map((m) => ({
             ...m,
             startBeirut: convertUTCToBeirut(m.startTime),
             endBeirut: convertUTCToBeirut(m.endTime),
@@ -119,14 +128,13 @@ function RoomInfo() {
 
         setMeetings(roomMeetings);
       })
-      .catch(err => console.error('Error fetching meetings:', err));
+      .catch((err) => console.error('Error fetching meetings:', err));
   };
 
   useEffect(() => {
     fetchMeetings();
   }, [roomId, selectedDate]);
 
-  // Booking form submission
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     setBookingError(null);
@@ -147,14 +155,14 @@ function RoomInfo() {
     const endUTC = new Date(selectedDate.toISOString().split('T')[0] + 'T' + formData.endTime).toISOString();
 
     try {
-      let url = 'https://localhost:7074/api/Meeting';
+      let url = `${apiOrigin}/api/Meeting`;
       let body = {
         title: formData.title || 'Untitled',
         agenda: formData.agenda || '',
         startTime: startUTC,
         endTime: endUTC,
         status: 'Scheduled',
-        roomId: roomId
+        roomId,
       };
 
       if (isRecurring) {
@@ -162,25 +170,25 @@ function RoomInfo() {
           setBookingError('Please select a recurrence end date.');
           return;
         }
-        url = 'https://localhost:7074/api/Meeting/recurring';
+        url = `${apiOrigin}/api/Meeting/recurring`;
         body = {
-          roomId: roomId,
+          roomId,
           title: formData.title || 'Untitled',
           agenda: formData.agenda || '',
           startTime: startUTC,
           endTime: endUTC,
           recurrencePattern,
-          recurrenceEndDate: new Date(recurrenceEndDate).toISOString()
+          recurrenceEndDate: new Date(recurrenceEndDate).toISOString(),
         };
       }
 
       const res = await fetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -194,8 +202,7 @@ function RoomInfo() {
       setIsRecurring(false);
       setRecurrencePattern('Daily');
       setRecurrenceEndDate('');
-
-      fetchMeetings(); // Refresh timeline
+      fetchMeetings();
     } catch (err) {
       setBookingError(err.message);
     }
@@ -207,12 +214,11 @@ function RoomInfo() {
   return (
     <>
       <Header />
-
       {/* Room Header Section */}
       <section className="relative md:h-[689px] h-[450px] w-full flex items-center justify-center" style={{ overflow: 'hidden', top: '-140px' }}>
         <div className="absolute inset-0 w-full h-full">
           <div className="bg-black absolute inset-0 z-10 opacity-50"></div>
-          <img src={roomImages[room?.name] || RoomImage} alt={room?.name} className="w-full h-full object-cover absolute inset-0" />
+          <img src={resolveRoomImage()} alt={room?.name} className="w-full h-full object-cover absolute inset-0" />
         </div>
         <div className="relative z-20 text-center text-white px-6 py-12 flex flex-col items-center justify-center mt-10 pt-20">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 drop-shadow-lg">{room?.name}</h1>
@@ -243,8 +249,8 @@ function RoomInfo() {
       </section>
 
       {/* Timeline Section */}
-      {/* Desktop Timeline */}
       <section className="mt-4 px-6">
+        {/* Desktop Timeline */}
         <div className="hidden md:block relative border rounded-lg overflow-hidden bg-gray-100 max-w-5xl mx-auto h-20">
           <div className="absolute inset-0 flex">
             {Array.from({ length: 11 }, (_, i) => (

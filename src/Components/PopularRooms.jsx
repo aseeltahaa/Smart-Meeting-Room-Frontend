@@ -1,28 +1,50 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import axios from "../api/axiosInstance";
 import Card from "./Card";
-import RoomImage from "../assets/room.jpg"; 
+import RoomImage from "../assets/room.jpg";
 import "../App.css";
 
 function PopularRooms() {
-  const [rooms, setRooms] = useState([null, null, null]); 
+  const [rooms, setRooms] = useState([null, null, null]);
   const [loading, setLoading] = useState(true);
+
+  // Derive API origin from axios baseURL (e.g., https://localhost:7074/api -> https://localhost:7074)
+  const apiOrigin = useMemo(() => {
+    try {
+      const base = axios.defaults?.baseURL || "";
+      if (/^https?:\/\//i.test(base)) {
+        const u = new URL(base);
+        return `${u.protocol}//${u.host}`;
+      }
+    } catch {}
+    // Fallback to current origin or your known backend origin
+    return window.location.origin || "https://localhost:7074";
+  }, []);
+
+  const resolveImageUrl = (imageUrl) => {
+    if (!imageUrl) return RoomImage;
+    if (/^https?:\/\//i.test(imageUrl)) return imageUrl; // already absolute
+    // ensure single slash between origin and path
+    const path = imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`;
+    return `${apiOrigin}${path}`;
+  };
 
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        const response = await axios.get("/Meeting/top-rooms");
-        const data = response.data;
+        const { data } = await axios.get("/Meeting/top-rooms");
+        const list = Array.isArray(data) ? data : [];
 
-        // Normalize to 3 slots
+        // Normalize to exactly 3 slots
         const normalized = [null, null, null];
-        for (let i = 0; i < 3; i++) {
-          if (data[i]) normalized[i] = data[i];
+        for (let i = 0; i < 3 && i < list.length; i++) {
+          normalized[i] = list[i];
         }
-
         setRooms(normalized);
       } catch (error) {
         console.error("Error fetching top rooms:", error);
+        setRooms([null, null, null]);
       } finally {
         setLoading(false);
       }
@@ -44,19 +66,24 @@ function PopularRooms() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl w-full">
             {rooms.map((room, index) =>
               room ? (
-                <Card
+                <Link
                   key={room.id}
-                  title={room.name}
-                  description={`Capacity: ${room.capacity} • Location: ${room.location} • Features: ${room.featureIds.length}`}
-                  imageSrc={RoomImage} // placeholder
-                  imageAlt={`Room ${room.name}`}
-                />
+                  to={`/room/${room.id}`} // ✅ match existing route (singular)
+                  className="block hover:scale-[1.02] transition-transform duration-200"
+                >
+                  <Card
+                    title={room.name}
+                    description={`Capacity: ${room.capacity} • Location: ${room.location} • Features: ${Array.isArray(room.featureIds) ? room.featureIds.length : 0}`}
+                    imageSrc={resolveImageUrl(room.imageUrl)} // ✅ build absolute URL or fallback
+                    imageAlt={`Room ${room.name}`}
+                  />
+                </Link>
               ) : (
                 <div
                   key={`empty-${index}`}
                   className="border border-gray-300 rounded-xl flex items-center justify-center h-64 text-gray-400 font-medium"
                 >
-                  null
+                  No data
                 </div>
               )
             )}

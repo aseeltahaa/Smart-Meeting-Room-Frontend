@@ -5,14 +5,14 @@ function RoomForm() {
   const [name, setName] = useState("");
   const [capacity, setCapacity] = useState("");
   const [location, setLocation] = useState("");
-  const [features, setFeatures] = useState([]); // all available features
-  const [selectedFeatures, setSelectedFeatures] = useState([]); // selected feature IDs
+  const [features, setFeatures] = useState([]);
+  const [selectedFeatures, setSelectedFeatures] = useState([]);
+  const [image, setImage] = useState(null);
 
   const [errors, setErrors] = useState([]);
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Fetch available features on mount
   useEffect(() => {
     const fetchFeatures = async () => {
       try {
@@ -31,6 +31,12 @@ function RoomForm() {
     );
   };
 
+  const handleImageChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setImage(e.target.files[0]);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors([]);
@@ -38,18 +44,31 @@ function RoomForm() {
     setLoading(true);
 
     try {
-      await axios.post("/Room", {
+      // Step 1: Create the room without image
+      const createRes = await axios.post("/Room", {
         name,
         capacity: Number(capacity),
         location,
         featureIds: selectedFeatures,
       });
 
+      const roomId = createRes.data.id;
+
+      // Step 2: If image selected, upload it
+      if (image) {
+        const formData = new FormData();
+        formData.append("file", image);
+        await axios.post(`/Room/${roomId}/upload-image`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
+
       setSuccess("✅ Room registered successfully!");
       setName("");
       setCapacity("");
       setLocation("");
       setSelectedFeatures([]);
+      setImage(null);
     } catch (err) {
       if (err.response) {
         const data = err.response.data;
@@ -116,8 +135,17 @@ function RoomForm() {
         required
       />
 
+      {/* Image upload */}
+      <div className="border rounded-md p-3">
+        <label className="font-semibold mb-1 block">Room Image</label>
+        <input type="file" accept="image/*" onChange={handleImageChange} />
+        {image && (
+          <p className="text-sm text-gray-600 mt-1">Selected: {image.name}</p>
+        )}
+      </div>
+
       {/* Features multi-select */}
-      <div className="border rounded-md p-3 focus-within:ring-2 ring-blue-500 max-h-40 overflow-y-auto">
+      <div className="border rounded-md p-3 max-h-40 overflow-y-auto">
         <label className="font-semibold mb-1 block">Select Features</label>
         {features.length === 0 && <p className="text-gray-500">Loading...</p>}
         {features.map((f) => (

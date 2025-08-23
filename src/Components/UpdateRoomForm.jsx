@@ -5,10 +5,10 @@ function UpdateRoomForm() {
   const [rooms, setRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [formData, setFormData] = useState({ name: "", capacity: "", location: "" });
+  const [image, setImage] = useState(null);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ✅ safe JSON parse helper
   const safeParse = (data) => {
     try {
       return typeof data === "string" ? JSON.parse(data) : data;
@@ -18,7 +18,6 @@ function UpdateRoomForm() {
     }
   };
 
-  // Fetch all rooms
   useEffect(() => {
     const fetchRooms = async () => {
       try {
@@ -41,11 +40,18 @@ function UpdateRoomForm() {
       capacity: room.capacity,
       location: room.location,
     });
+    setImage(null);
     setStatus("");
   };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleImageChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setImage(e.target.files[0]);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -56,11 +62,22 @@ function UpdateRoomForm() {
     setStatus("");
 
     try {
+      // Step 1: Update room basic info
       await axios.put(`/Room/${selectedRoom.id}`, {
         name: formData.name,
-        capacity: Number(formData.capacity), // ensure number
+        capacity: Number(formData.capacity),
         location: formData.location,
       });
+
+      // Step 2: If new image is selected, upload it
+      if (image) {
+        const formDataImg = new FormData();
+        formDataImg.append("file", image);
+        await axios.post(`/Room/${selectedRoom.id}/upload-image`, formDataImg, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
+
       setStatus("✅ Room updated successfully!");
     } catch (err) {
       console.error(err);
@@ -115,6 +132,13 @@ function UpdateRoomForm() {
             className="border rounded p-2"
             required
           />
+          <div className="border rounded-md p-3">
+            <label className="font-semibold mb-1 block">Update Room Image</label>
+            <input type="file" accept="image/*" onChange={handleImageChange} />
+            {image && (
+              <p className="text-sm text-gray-600 mt-1">Selected: {image.name}</p>
+            )}
+          </div>
           <button
             type="submit"
             disabled={loading}
