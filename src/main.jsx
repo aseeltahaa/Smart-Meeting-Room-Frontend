@@ -14,10 +14,9 @@ import RoomInfo from './Pages/RoomInfo.jsx';
 import UpdateRoomPage from './Pages/UpdateRoomPage.jsx';
 import Profile from './Pages/Profile.jsx';
 import ResetPassword from './Pages/ResetPassword.jsx';
-
-// New Meeting Pages
 import ViewMeeting from './Pages/ViewMeeting.jsx';
 import EditMeeting from './Pages/EditMeeting.jsx';
+import Notifications from './Pages/Notifications.jsx';
 
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 
@@ -41,9 +40,11 @@ const router = createBrowserRouter([
   { path: "/reset-password", element: <ResetPassword /> },
 
   // Meetings Pages
-  { path: "/meetings/view/:id", element: <ViewMeeting /> },       // View single meeting
-  { path: "/meetings/edit/:id", element: <EditMeeting /> },       // Edit meeting
+  { path: "/meetings/view/:id", element: <ViewMeeting /> },
+  { path: "/meetings/edit/:id", element: <EditMeeting /> },
 
+  //Notifications
+  { path : "/notifications", element: <Notifications /> },
   // Catch-all
   { path: "*", element: <NotFound /> }
 ]);
