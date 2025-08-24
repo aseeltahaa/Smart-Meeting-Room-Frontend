@@ -3,10 +3,11 @@ import {
   FaCalendarAlt as Calendar,
   FaClock as Clock,
   FaEdit as Edit,
-  FaEye as Eye,
   FaUsers as Users,
   FaMapMarkerAlt as MapPin,
   FaExclamationCircle as AlertCircle,
+  FaCheck as Check,
+  FaTimes as Times,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import axios from "../api/axiosInstance";
@@ -20,7 +21,16 @@ const convertUTCToBeirut = (utcString) => {
 };
 
 // Meeting Card Component
-const MeetingCard = ({ meeting, onView, onEdit, isOrganized }) => {
+const MeetingCard = ({
+  meetingWrapper, // {inviteId, meeting}
+  onEdit,
+  isOrganized,
+  onAccept,
+  onDecline,
+  isPending,
+}) => {
+  const { meeting, inviteId } = meetingWrapper;
+
   const formatDate = (dateString) => {
     const beirutDate = convertUTCToBeirut(dateString);
     return beirutDate
@@ -95,15 +105,8 @@ const MeetingCard = ({ meeting, onView, onEdit, isOrganized }) => {
         </div>
       </div>
 
-      <div className="flex gap-2 pt-4 border-t border-gray-100">
-        <button
-          onClick={() => onView(meeting.id)}
-          className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2"
-        >
-          <Eye className="h-4 w-4" />
-          View
-        </button>
-        {isOrganized && (
+      {isOrganized && onEdit && (
+        <div className="flex gap-2 pt-4 border-t border-gray-100">
           <button
             onClick={() => onEdit(meeting.id)}
             className="flex-1 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2"
@@ -114,95 +117,94 @@ const MeetingCard = ({ meeting, onView, onEdit, isOrganized }) => {
             <Edit className="h-4 w-4" />
             Edit
           </button>
-        )}
-      </div>
+        </div>
+      )}
+
+      {isPending && (
+        <div className="flex gap-2 pt-4 border-t border-gray-100">
+          <button
+            onClick={() => onAccept(meeting.id, inviteId)}
+            className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Check className="h-4 w-4" /> Accept
+          </button>
+          <button
+            onClick={() => onDecline(meeting.id, inviteId)}
+            className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Times className="h-4 w-4" /> Decline
+          </button>
+        </div>
+      )}
     </div>
   );
 };
 
 // Main Meetings Manager Component
 const MeetingsManager = () => {
-  const [userData, setUserData] = useState(null);
   const [organizedMeetings, setOrganizedMeetings] = useState([]);
-  const [invitedMeetings, setInvitedMeetings] = useState([]);
+  const [acceptedInvites, setAcceptedInvites] = useState([]);
+  const [pendingInvites, setPendingInvites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Pagination
   const [organizedPage, setOrganizedPage] = useState(1);
-  const [invitedPage, setInvitedPage] = useState(1);
+  const [acceptedPage, setAcceptedPage] = useState(1);
+  const [pendingPage, setPendingPage] = useState(1);
   const pageSize = 3;
 
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchUserData();
-  }, []);
+    fetchAll();
+  }, [organizedPage, acceptedPage, pendingPage]);
 
-  useEffect(() => {
-    if (userData) {
-      fetchOrganizedMeetings();
-      fetchInvitedMeetings();
-    }
-  }, [userData, organizedPage, invitedPage]);
-
-  // Fetch user info
-  const fetchUserData = async () => {
+  const fetchAll = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("/Users/me");
-      setUserData(res.data);
+      await Promise.all([fetchOrganizedMeetings(), fetchAcceptedInvites(), fetchPendingInvites()]);
       setError(null);
     } catch (err) {
       console.error(err);
-      setError("Failed to fetch user info.");
+      setError("Failed to load meetings.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch organized meetings
   const fetchOrganizedMeetings = async () => {
+    const res = await axios.get(`/Users/me/meetings/organized?page=${organizedPage}&pageSize=${pageSize}`);
+    setOrganizedMeetings(res.data);
+  };
+
+  const fetchAcceptedInvites = async () => {
+    const res = await axios.get(`/Users/me/invites/accepted?page=${acceptedPage}&pageSize=${pageSize}`);
+    setAcceptedInvites(res.data);
+  };
+
+  const fetchPendingInvites = async () => {
+    const res = await axios.get(`/Users/me/invites/pending?page=${pendingPage}&pageSize=${pageSize}`);
+    setPendingInvites(res.data);
+  };
+
+  const handleAccept = async (meetingId, inviteId) => {
     try {
-      setLoading(true);
-      const res = await axios.get(
-        `/Users/me/meetings/organized?page=${organizedPage}&pageSize=${pageSize}`
-      );
-      const now = new Date();
-      const upcoming = res.data
-        .filter((m) => new Date(m.startTime) >= now)
-        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
-      setOrganizedMeetings(upcoming);
+await axios.put(`/Meeting/${meetingId}/invitees/${inviteId}/accept`);
+      fetchPendingInvites();
+      fetchAcceptedInvites();
     } catch (err) {
-      console.error(err);
-      setError("Failed to fetch organized meetings.");
-    } finally {
-      setLoading(false);
+      console.error("Failed to accept invite:", err);
     }
   };
 
-  // Fetch invited meetings
-  const fetchInvitedMeetings = async () => {
+  const handleDecline = async (meetingId, inviteId) => {
     try {
-      setLoading(true);
-      const res = await axios.get(
-        `/Users/me/meetings/invited?page=${invitedPage}&pageSize=${pageSize}`
-      );
-      const now = new Date();
-      const upcoming = res.data
-        .filter((m) => new Date(m.startTime) >= now)
-        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
-      setInvitedMeetings(upcoming);
+await axios.put(`/Meeting/${meetingId}/invitees/${inviteId}/decline`);
+      fetchPendingInvites();
     } catch (err) {
-      console.error(err);
-      setError("Failed to fetch invited meetings.");
-    } finally {
-      setLoading(false);
+      console.error("Failed to decline invite:", err);
     }
-  };
-
-  const handleView = (meetingId) => {
-    navigate(`/meetings/view/${meetingId}`);
   };
 
   const handleEdit = (meetingId) => {
@@ -224,107 +226,88 @@ const MeetingsManager = () => {
       <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
       <h2 className="text-xl font-semibold text-gray-900 mb-2">Something went wrong</h2>
       <p className="text-red-600 mb-4">{error}</p>
-      <button
-        onClick={() => {
-          fetchUserData();
-          fetchOrganizedMeetings();
-          fetchInvitedMeetings();
-        }}
-        className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-2 rounded-md font-medium"
-      >
+      <button onClick={fetchAll} className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-2 rounded-md font-medium">
         Try Again
       </button>
     </div>
   ) : (
     <div className="min-h-screen bg-white py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Organized Meetings Section */}
         <MeetingsSection
           title="My Organized Meetings"
-          icon={Users}
-          meetings={organizedMeetings}
+          meetings={organizedMeetings.map(m => ({ meeting: m }))}
           page={organizedPage}
           setPage={setOrganizedPage}
-          handleView={handleView}
-          handleEdit={handleEdit}
           isOrganized
+          onEdit={handleEdit}
         />
-
-        {/* Invited Meetings Section */}
         <MeetingsSection
-          title="Meetings I'm Invited To"
-          icon={MapPin}
-          meetings={invitedMeetings}
-          page={invitedPage}
-          setPage={setInvitedPage}
-          handleView={handleView}
-          handleEdit={null}
-          isOrganized={false}
+          title="Accepted Meeting Invites"
+          meetings={acceptedInvites}
+          page={acceptedPage}
+          setPage={setAcceptedPage}
+        />
+        <MeetingsSection
+          title="Pending Meeting Invites"
+          meetings={pendingInvites}
+          page={pendingPage}
+          setPage={setPendingPage}
+          isPending
+          onAccept={handleAccept}
+          onDecline={handleDecline}
         />
       </div>
     </div>
   );
 };
 
-// Reusable section component
+// Section Component
 const MeetingsSection = ({
   title,
-  icon: Icon,
   meetings,
   page,
   setPage,
-  handleView,
-  handleEdit,
-  isOrganized,
+  isOrganized = false,
+  isPending = false,
+  onEdit,
+  onAccept,
+  onDecline,
 }) => {
   const pageSize = 3;
 
   return (
     <div className="mb-12">
       <div className="flex items-center gap-3 mb-6">
-        <Icon className="h-6 w-6 text-blue-600" />
         <h2 className="text-2xl font-semibold text-gray-900">{title}</h2>
-        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-          {meetings.length}
-        </span>
+        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">{meetings.length}</span>
       </div>
 
       {meetings.length === 0 ? (
         <div className="bg-gray-100 rounded-lg shadow-sm border border-gray-200 p-8 text-center">
           <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            No meetings
-          </h3>
-          <p className="text-gray-500">
-            {isOrganized ? "You haven't created any meetings yet" : "You haven't been invited to any meetings yet"}
-          </p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No meetings</h3>
+          <p className="text-gray-500">{isOrganized ? "You haven't created any meetings yet" : "You don't have any meetings here"}</p>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {meetings.map((meeting) => (
+            {meetings.map((m) => (
               <MeetingCard
-                key={meeting.id}
-                meeting={meeting}
-                onView={handleView}
-                onEdit={handleEdit}
+                key={m.meeting.id + (m.inviteId || "")}
+                meetingWrapper={m}
                 isOrganized={isOrganized}
+                isPending={isPending}
+                onEdit={onEdit}
+                onAccept={onAccept}
+                onDecline={onDecline}
               />
             ))}
           </div>
           <div className="flex justify-between mt-4">
-            <button
-              onClick={() => setPage(Math.max(page - 1, 1))}
-              disabled={page === 1}
-              className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200"
-            >
+            <button onClick={() => setPage(Math.max(page - 1, 1))} disabled={page === 1} className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200">
               Previous
             </button>
-            <button
-              onClick={() => setPage(page + 1)}
-              disabled={meetings.length < pageSize}
-              className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200"
-            >
+            <button onClick={() => setPage(page + 1)} disabled={meetings.length < pageSize} className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200">
               Next
             </button>
           </div>
