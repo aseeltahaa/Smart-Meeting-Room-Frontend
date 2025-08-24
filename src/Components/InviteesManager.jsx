@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "../api/axiosInstance";
+import notificationService from "../services/notificationService";
 
 function InviteesManager({ meetingId }) {
   const [invitees, setInvitees] = useState([]);
@@ -8,6 +9,7 @@ function InviteesManager({ meetingId }) {
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
+  const [meetingData, setMeetingData] = useState(null);
 
   // Fetch all users
   useEffect(() => {
@@ -29,6 +31,7 @@ function InviteesManager({ meetingId }) {
     const fetchInvitees = async () => {
       try {
         const res = await api.get(`/Meeting/${meetingId}`);
+        setMeetingData(res.data);
         setInvitees(Array.isArray(res.data.invitees) ? res.data.invitees : []);
       } catch (err) {
         console.error("Failed to load invitees:", err);
@@ -59,9 +62,24 @@ function InviteesManager({ meetingId }) {
         userId: user.id,
         email: user.email,
       });
+      
       setInvitees((prev) => [...prev, res.data]);
       setInviteeSearch("");
       setSuggestions([]);
+
+      // 🔔 Send notification to invited user
+      if (meetingData) {
+        try {
+          await notificationService.notifyUserInvited(
+            user.id,
+            meetingData.title || 'Meeting',
+            'Meeting Organizer' // Since we don't have current user, use generic name
+          );
+          console.log('✅ Invitation notification sent successfully');
+        } catch (notifError) {
+          console.error('❌ Failed to send invitation notification:', notifError);
+        }
+      }
     } catch (err) {
       console.error(err);
       setStatus("❌ Failed to add invitee: " + (err.response?.data || err.message));

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import axios from "../api/axiosInstance";
+import notificationService from "../services/notificationService"; // Import the service
 
 function ActionItemsList({ meetingId }) {
   const [actionItems, setActionItems] = useState([]);
   const [newItem, setNewItem] = useState({ description: "", type: "", deadline: "", email: "" });
   const [users, setUsers] = useState([]);
   const [usersMap, setUsersMap] = useState({});
+  const [meetingData, setMeetingData] = useState(null); // Store meeting data
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -19,7 +21,11 @@ function ActionItemsList({ meetingId }) {
           axios.get(`/Meeting/${meetingId}`),
           axios.get("/Users")
         ]);
+        
+        // Store meeting data for notifications
+        setMeetingData(meetingRes.data);
         setActionItems(Array.isArray(meetingRes.data.actionItems) ? meetingRes.data.actionItems : []);
+        
         const fetchedUsers = Array.isArray(usersRes.data) ? usersRes.data : [];
         setUsers(fetchedUsers);
         const map = {};
@@ -57,10 +63,25 @@ function ActionItemsList({ meetingId }) {
         deadline: newItem.deadline,
         assignedToUserId: assignedUser.id
       });
+      
       setActionItems(prev => [...prev, res.data]);
       setNewItem({ description: "", type: "", deadline: "", email: "" });
       setSuggestions([]);
       setMessage("✅ Action item added!");
+
+      // 🔔 Send notification to assigned user
+      if (meetingData) {
+        try {
+          await notificationService.notifyActionItemAssignment(
+            assignedUser.id,
+            res.data,
+            meetingData.title || 'Meeting'
+          );
+        } catch (notifError) {
+          console.error('Failed to send notification:', notifError);
+          // Don't show error to user - notification failure shouldn't break the flow
+        }
+      }
     } catch (err) {
       console.error(err);
       setError("❌ Failed to add action item.");
@@ -133,7 +154,6 @@ function ActionItemsList({ meetingId }) {
     )}
   </div>
 );
-
 
   return (
     <div className="p-4 border rounded-lg mb-6 bg-gray-50 shadow">

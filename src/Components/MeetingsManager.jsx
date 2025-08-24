@@ -2,12 +2,13 @@ import React, { useState, useEffect } from "react";
 import {
   FaCalendarAlt as Calendar,
   FaClock as Clock,
-  FaEdit as Edit,
   FaUsers as Users,
   FaMapMarkerAlt as MapPin,
   FaExclamationCircle as AlertCircle,
   FaCheck as Check,
   FaTimes as Times,
+  FaEdit as Edit,
+  FaEye as Eye,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import axios from "../api/axiosInstance";
@@ -23,13 +24,18 @@ const convertUTCToBeirut = (utcString) => {
 // Meeting Card Component
 const MeetingCard = ({
   meetingWrapper, // {inviteId, meeting}
-  onEdit,
   isOrganized,
   onAccept,
   onDecline,
   isPending,
 }) => {
   const { meeting, inviteId } = meetingWrapper;
+  const navigate = useNavigate();
+
+  const handleAction = (type) => {
+    if (type === "view") navigate(`/meetings/view/${meeting.id}`);
+    if (type === "edit") navigate(`/meetings/edit/${meeting.id}`);
+  };
 
   const formatDate = (dateString) => {
     const beirutDate = convertUTCToBeirut(dateString);
@@ -105,21 +111,29 @@ const MeetingCard = ({
         </div>
       </div>
 
-      {isOrganized && onEdit && (
-        <div className="flex gap-2 pt-4 border-t border-gray-100">
+      {/* View + Edit buttons */}
+      <div className="flex gap-2 pt-4 border-t border-gray-100">
+        <button
+          onClick={() => handleAction("view")}
+          className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center gap-2"
+        >
+          <Eye className="h-4 w-4" /> View
+        </button>
+
+        {isOrganized && (
           <button
-            onClick={() => onEdit(meeting.id)}
-            className="flex-1 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2"
+            onClick={() => handleAction("edit")}
+            className="flex-1 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center gap-2"
             style={{ backgroundColor: "#539D98" }}
             onMouseOver={(e) => (e.target.style.backgroundColor = "#4A8A85")}
             onMouseOut={(e) => (e.target.style.backgroundColor = "#539D98")}
           >
-            <Edit className="h-4 w-4" />
-            Edit
+            <Edit className="h-4 w-4" /> Edit
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
+      {/* Pending buttons */}
       {isPending && (
         <div className="flex gap-2 pt-4 border-t border-gray-100">
           <button
@@ -154,8 +168,6 @@ const MeetingsManager = () => {
   const [pendingPage, setPendingPage] = useState(1);
   const pageSize = 3;
 
-  const navigate = useNavigate();
-
   useEffect(() => {
     fetchAll();
   }, [organizedPage, acceptedPage, pendingPage]);
@@ -163,7 +175,11 @@ const MeetingsManager = () => {
   const fetchAll = async () => {
     try {
       setLoading(true);
-      await Promise.all([fetchOrganizedMeetings(), fetchAcceptedInvites(), fetchPendingInvites()]);
+      await Promise.all([
+        fetchOrganizedMeetings(),
+        fetchAcceptedInvites(),
+        fetchPendingInvites(),
+      ]);
       setError(null);
     } catch (err) {
       console.error(err);
@@ -174,23 +190,29 @@ const MeetingsManager = () => {
   };
 
   const fetchOrganizedMeetings = async () => {
-    const res = await axios.get(`/Users/me/meetings/organized?page=${organizedPage}&pageSize=${pageSize}`);
+    const res = await axios.get(
+      `/Users/me/meetings/organized?page=${organizedPage}&pageSize=${pageSize}`
+    );
     setOrganizedMeetings(res.data);
   };
 
   const fetchAcceptedInvites = async () => {
-    const res = await axios.get(`/Users/me/invites/accepted?page=${acceptedPage}&pageSize=${pageSize}`);
+    const res = await axios.get(
+      `/Users/me/invites/accepted?page=${acceptedPage}&pageSize=${pageSize}`
+    );
     setAcceptedInvites(res.data);
   };
 
   const fetchPendingInvites = async () => {
-    const res = await axios.get(`/Users/me/invites/pending?page=${pendingPage}&pageSize=${pageSize}`);
+    const res = await axios.get(
+      `/Users/me/invites/pending?page=${pendingPage}&pageSize=${pageSize}`
+    );
     setPendingInvites(res.data);
   };
 
   const handleAccept = async (meetingId, inviteId) => {
     try {
-await axios.put(`/Meeting/${meetingId}/invitees/${inviteId}/accept`);
+      await axios.put(`/Meeting/${meetingId}/invitees/${inviteId}/accept`);
       fetchPendingInvites();
       fetchAcceptedInvites();
     } catch (err) {
@@ -200,15 +222,11 @@ await axios.put(`/Meeting/${meetingId}/invitees/${inviteId}/accept`);
 
   const handleDecline = async (meetingId, inviteId) => {
     try {
-await axios.put(`/Meeting/${meetingId}/invitees/${inviteId}/decline`);
+      await axios.put(`/Meeting/${meetingId}/invitees/${inviteId}/decline`);
       fetchPendingInvites();
     } catch (err) {
       console.error("Failed to decline invite:", err);
     }
-  };
-
-  const handleEdit = (meetingId) => {
-    navigate(`/meetings/edit/${meetingId}`);
   };
 
   return loading ? (
@@ -224,9 +242,14 @@ await axios.put(`/Meeting/${meetingId}/invitees/${inviteId}/decline`);
   ) : error ? (
     <div className="min-h-screen flex items-center justify-center text-center">
       <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-      <h2 className="text-xl font-semibold text-gray-900 mb-2">Something went wrong</h2>
+      <h2 className="text-xl font-semibold text-gray-900 mb-2">
+        Something went wrong
+      </h2>
       <p className="text-red-600 mb-4">{error}</p>
-      <button onClick={fetchAll} className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-2 rounded-md font-medium">
+      <button
+        onClick={fetchAll}
+        className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-2 rounded-md font-medium"
+      >
         Try Again
       </button>
     </div>
@@ -235,11 +258,10 @@ await axios.put(`/Meeting/${meetingId}/invitees/${inviteId}/decline`);
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <MeetingsSection
           title="My Organized Meetings"
-          meetings={organizedMeetings.map(m => ({ meeting: m }))}
+          meetings={organizedMeetings.map((m) => ({ meeting: m }))}
           page={organizedPage}
           setPage={setOrganizedPage}
           isOrganized
-          onEdit={handleEdit}
         />
         <MeetingsSection
           title="Accepted Meeting Invites"
@@ -269,7 +291,6 @@ const MeetingsSection = ({
   setPage,
   isOrganized = false,
   isPending = false,
-  onEdit,
   onAccept,
   onDecline,
 }) => {
@@ -279,14 +300,20 @@ const MeetingsSection = ({
     <div className="mb-12">
       <div className="flex items-center gap-3 mb-6">
         <h2 className="text-2xl font-semibold text-gray-900">{title}</h2>
-        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">{meetings.length}</span>
+        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+          {meetings.length}
+        </span>
       </div>
 
       {meetings.length === 0 ? (
         <div className="bg-gray-100 rounded-lg shadow-sm border border-gray-200 p-8 text-center">
           <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No meetings</h3>
-          <p className="text-gray-500">{isOrganized ? "You haven't created any meetings yet" : "You don't have any meetings here"}</p>
+          <p className="text-gray-500">
+            {isOrganized
+              ? "You haven't created any meetings yet"
+              : "You don't have any meetings here"}
+          </p>
         </div>
       ) : (
         <>
@@ -297,17 +324,24 @@ const MeetingsSection = ({
                 meetingWrapper={m}
                 isOrganized={isOrganized}
                 isPending={isPending}
-                onEdit={onEdit}
                 onAccept={onAccept}
                 onDecline={onDecline}
               />
             ))}
           </div>
           <div className="flex justify-between mt-4">
-            <button onClick={() => setPage(Math.max(page - 1, 1))} disabled={page === 1} className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200">
+            <button
+              onClick={() => setPage(Math.max(page - 1, 1))}
+              disabled={page === 1}
+              className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200"
+            >
               Previous
             </button>
-            <button onClick={() => setPage(page + 1)} disabled={meetings.length < pageSize} className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200">
+            <button
+              onClick={() => setPage(page + 1)}
+              disabled={meetings.length < pageSize}
+              className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200"
+            >
               Next
             </button>
           </div>
