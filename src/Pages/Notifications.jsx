@@ -40,6 +40,19 @@ const NotificationCard = ({ notification, onMarkRead, onMarkUnread, onDelete }) 
     });
   };
 
+  // Get notification icon based on subject content
+  const getNotificationIcon = () => {
+    const subject = notification.subject?.toLowerCase() || "";
+    if (subject.includes("action item")) {
+      return "📋";
+    } else if (subject.includes("invitation") || subject.includes("invited")) {
+      return "📅";
+    } else if (subject.includes("note")) {
+      return "📝";
+    }
+    return "🔔";
+  };
+
   return (
     <div
       className={`bg-white rounded-lg shadow-md border border-gray-200 p-6 hover:shadow-lg transition-all duration-200 relative ${
@@ -47,7 +60,7 @@ const NotificationCard = ({ notification, onMarkRead, onMarkUnread, onDelete }) 
       }`}
     >
       {/* Actions - always top right */}
-  <div className="absolute top-4 right-4 z-20 flex flex-col items-end gap-2">
+      <div className="absolute top-4 right-4 z-20 flex flex-col items-end gap-2">
         <button
           onClick={() => setShowActions(!showActions)}
           className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
@@ -96,12 +109,12 @@ const NotificationCard = ({ notification, onMarkRead, onMarkUnread, onDelete }) 
           </>
         )}
       </div>
-      {/* ...existing card content... */}
+
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
         <div className="flex items-start sm:items-center space-x-4 flex-1">
           <div className="flex-shrink-0 mt-1">
-            <div className={`p-2 rounded-full ${!notification.isRead ? "bg-[#539D98]" : "bg-gray-400"}`}>
-              <FaBell className="w-4 h-4 text-white" />
+            <div className={`p-2 rounded-full ${!notification.isRead ? "bg-[#539D98]" : "bg-gray-400"} flex items-center justify-center`}>
+              <span className="text-white text-lg">{getNotificationIcon()}</span>
             </div>
           </div>
 
@@ -163,7 +176,11 @@ const Notifications = () => {
       setLoading(true);
       setError(null);
       const res = await axios.get("/Notifications");
-      setNotifications(res.data);
+      // Sort notifications by date (newest first)
+      const sortedNotifications = Array.isArray(res.data) 
+        ? res.data.sort((a, b) => new Date(b.date) - new Date(a.date))
+        : [];
+      setNotifications(sortedNotifications);
     } catch (err) {
       console.error(err);
       setError("Failed to load notifications. Please try again.");
@@ -182,14 +199,23 @@ const Notifications = () => {
     }
   };
 
-  const markAsUnread = (id) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: false } : n)));
+  const markAsUnread = async (id) => {
+    try {
+      // If you have an API endpoint for mark as unread, use it:
+      // await axios.put(`/Notifications/mark-as-unread/${id}`);
+      
+      // Otherwise, just update locally:
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: false } : n)));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const deleteNotification = async (id) => {
     try {
       await axios.delete(`/Notifications/${id}`);
       setNotifications((prev) => prev.filter((n) => n.id !== id));
+      window.dispatchEvent(new Event("notifications-updated"));
     } catch (err) {
       console.error(err);
     }
@@ -200,10 +226,21 @@ const Notifications = () => {
     try {
       await Promise.all(unreadNotifications.map((n) => axios.put(`/Notifications/mark-as-read/${n.id}`)));
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      window.dispatchEvent(new Event("notifications-updated"));
     } catch (err) {
       console.error(err);
     }
   };
+
+  // Listen for notification updates from other parts of the app
+  useEffect(() => {
+    const handleNotificationUpdate = () => {
+      fetchNotifications();
+    };
+
+    window.addEventListener("notifications-updated", handleNotificationUpdate);
+    return () => window.removeEventListener("notifications-updated", handleNotificationUpdate);
+  }, []);
 
   useEffect(() => {
     fetchNotifications();

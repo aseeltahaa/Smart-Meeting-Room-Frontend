@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../api/axiosInstance';
+import notificationService from '../services/notificationService';
 
 function NotesList({ meetingId }) {
   const [notes, setNotes] = useState([]);
@@ -7,6 +8,7 @@ function NotesList({ meetingId }) {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
+  const [meetingData, setMeetingData] = useState(null);
 
   // Fetch notes on mount or when meetingId changes
   useEffect(() => {
@@ -15,6 +17,7 @@ function NotesList({ meetingId }) {
       setError(null);
       try {
         const res = await axios.get(`/Meeting/${meetingId}`);
+        setMeetingData(res.data);
         setNotes(Array.isArray(res.data.notes) ? res.data.notes : []);
       } catch (err) {
         console.error(err);
@@ -33,10 +36,33 @@ function NotesList({ meetingId }) {
     setMessage('');
     try {
       const res = await axios.post(`/Meeting/${meetingId}/notes`, { content: newNote });
+      
       // Add new note locally
       setNotes(prev => [...prev, res.data]);
       setNewNote('');
       setMessage('✅ Note added successfully!');
+
+      // 🔔 Send notifications to all invitees
+      if (meetingData && meetingData.invitees) {
+        try {
+          // Get all invitee user IDs
+          const inviteeUserIds = meetingData.invitees
+            .map(invitee => invitee.userId)
+            .filter(userId => userId); // Remove any undefined/null values
+
+          if (inviteeUserIds.length > 0) {
+            await notificationService.notifyNoteAdded(
+              inviteeUserIds,
+              meetingData.title || 'Meeting',
+              res.data.content,
+              'Meeting Participant' // Since we don't have current user, use generic name
+            );
+            console.log('✅ Note notification sent to', inviteeUserIds.length, 'invitees');
+          }
+        } catch (notifError) {
+          console.error('❌ Failed to send note notification:', notifError);
+        }
+      }
     } catch (err) {
       console.error(err);
       setError('❌ Failed to add note.');
