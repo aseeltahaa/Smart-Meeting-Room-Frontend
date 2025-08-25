@@ -33,7 +33,7 @@ const MeetingCard = ({
   const navigate = useNavigate();
 
   const handleAction = (type) => {
-    if (type === "view") navigate(`/meetings/view/${meeting.id}`);
+    if (type === "view") navigate(`/meetings/${meeting.id}/detailsView`);
     if (type === "edit") navigate(`/meetings/${meeting.id}/details`); 
   };
 

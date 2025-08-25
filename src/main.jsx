@@ -14,12 +14,14 @@ import RoomInfo from './Pages/RoomInfo.jsx';
 import UpdateRoomPage from './Pages/UpdateRoomPage.jsx';
 import Profile from './Pages/Profile.jsx';
 import ResetPassword from './Pages/ResetPassword.jsx';
-import ViewMeeting from './Pages/ViewMeeting.jsx';
 import Notifications from './Pages/Notifications.jsx';
 import MeetingDetailsPage from './Pages/MeetingDetailsPage.jsx';
 import MeetingInviteesPage from './Pages/MeetingInviteesPage.jsx';
 import MeetingActionsPage from './Pages/MeetingActionsPage.jsx';
 import MeetingNotesPage from './Pages/MeetingNotesPage.jsx';
+import MeetingDetailsView from './Pages/MeetingDetailsView.jsx'
+import NotesView from './Pages/NotesView.jsx';
+import TasksView from './Pages/TasksView.jsx';
 
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 
@@ -43,11 +45,15 @@ const router = createBrowserRouter([
   { path: "/reset-password", element: <ResetPassword /> },
 
   // Meetings Pages
-  { path: "/meetings/view/:id", element: <ViewMeeting /> },
   { path: "/meetings/:id/details", element: <MeetingDetailsPage /> },
   { path: "/meetings/:id/invitees", element: <MeetingInviteesPage /> },
   { path: "/meetings/:id/actions", element: <MeetingActionsPage /> },
   { path: "/meetings/:id/notes", element: <MeetingNotesPage /> },
+
+  // View Pages
+  { path: "/meetings/:id/detailsView", element: <MeetingDetailsView /> },
+  { path: "/meetings/:id/notesView", element: <NotesView /> },
+  { path: "/meetings/:id/tasksView", element: <TasksView /> },
 
   //Notifications
   { path : "/notifications", element: <Notifications /> },
