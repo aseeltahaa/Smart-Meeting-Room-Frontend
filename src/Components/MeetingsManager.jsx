@@ -23,7 +23,7 @@ const convertUTCToBeirut = (utcString) => {
 
 // Meeting Card Component
 const MeetingCard = ({
-  meetingWrapper, // {inviteId, meeting}
+  meetingWrapper,
   isOrganized,
   onAccept,
   onDecline,
@@ -34,7 +34,7 @@ const MeetingCard = ({
 
   const handleAction = (type) => {
     if (type === "view") navigate(`/meetings/view/${meeting.id}`);
-    if (type === "edit") navigate(`/meetings/edit/${meeting.id}`);
+    if (type === "edit") navigate(`/meetings/${meeting.id}/details`); 
   };
 
   const formatDate = (dateString) => {
@@ -111,7 +111,7 @@ const MeetingCard = ({
         </div>
       </div>
 
-      {/* View + Edit buttons */}
+      {/* View + Manage buttons */}
       <div className="flex gap-2 pt-4 border-t border-gray-100">
         <button
           onClick={() => handleAction("view")}
@@ -125,8 +125,6 @@ const MeetingCard = ({
             onClick={() => handleAction("edit")}
             className="flex-1 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center gap-2"
             style={{ backgroundColor: "#539D98" }}
-            onMouseOver={(e) => (e.target.style.backgroundColor = "#4A8A85")}
-            onMouseOut={(e) => (e.target.style.backgroundColor = "#539D98")}
           >
             <Edit className="h-4 w-4" /> Edit
           </button>
