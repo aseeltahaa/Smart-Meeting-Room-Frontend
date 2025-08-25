@@ -4,26 +4,6 @@ import Header from '../Components/Header';
 import Footer from '../Components/Footer';
 import RoomImage from '../assets/room.jpg';
 
-// Hardcoded room images
-import Room101 from '../assets/rooms/room101.jpg';
-import Room102 from '../assets/rooms/room102.jpg';
-import Room201 from '../assets/rooms/room201.jpg';
-import Room202 from '../assets/rooms/room202.jpg';
-import Room301 from '../assets/rooms/room301.jpg';
-import Room302 from '../assets/rooms/room302.jpg';
-import Room401 from '../assets/rooms/room401.jpg';
-
-// Room images mapping
-const roomImages = {
-  'Room 101': Room101,
-  'Room 102': Room102,
-  'Room 201': Room201,
-  'Room 202': Room202,
-  'Room 301': Room301,
-  'Room 302': Room302,
-  'Room 401': Room401,
-};
-
 function RoomInfo() {
   const { roomId } = useParams();
   const [room, setRoom] = useState(null);
