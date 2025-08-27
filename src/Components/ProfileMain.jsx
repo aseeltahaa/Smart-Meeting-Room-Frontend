@@ -26,7 +26,7 @@ function ProfileMain() {
 
     fetchUser();
   }, []);
-
+console.log(user);
   if (loading) return <p className="text-center mt-10">Loading...</p>;
   if (error) return <p className="text-center mt-10 text-red-500">{error}</p>;
 

@@ -36,7 +36,7 @@ function RoomInfo() {
       const path = room.imageUrl.startsWith('/') ? room.imageUrl : `/${room.imageUrl}`;
       return `${apiOrigin}${path}`;
     }
-    return roomImages[room?.name] || RoomImage;
+    return RoomImage;
   };
 
   // Fetch room info
