@@ -191,9 +191,6 @@ function RoomInfo() {
   if (loading) return <p>Loading room info...</p>;
   if (error) return <p className="text-red-500">{error}</p>;
 
-  const totalHours = 24;
-  const startHour = 0;
-
   return (
     <>
       <Header />
@@ -234,40 +231,64 @@ function RoomInfo() {
       {/* Timeline Section */}
       <section className="mt-4 px-6">
         {/* Desktop Timeline */}
-        <div className="hidden md:block relative border rounded-lg overflow-hidden bg-gray-100 max-w-5xl mx-auto h-20">
+        <div className="hidden md:block relative border rounded-lg overflow-hidden bg-gray-100 max-w-full mx-auto h-20">
           <div className="absolute inset-0 flex">
-            {Array.from({ length: totalHours }, (_, i) => (
+            {Array.from({ length: 24 }, (_, i) => (
               <div key={i} className="flex-1 border-l border-gray-300 relative"></div>
             ))}
           </div>
           {meetings.map((m, idx) => {
             const start = m.startBeirut.getHours() + m.startBeirut.getMinutes() / 60;
             const end = m.endBeirut.getHours() + m.endBeirut.getMinutes() / 60;
-            const leftPercent = ((start - startHour) / totalHours) * 100;
+            const totalHours = 24;
+            const leftPercent = (start / totalHours) * 100;
             const widthPercent = ((end - start) / totalHours) * 100;
-            return <div key={idx} className="absolute top-0 h-full bg-blue-500" style={{ left: `${leftPercent}%`, width: `${widthPercent}%` }}></div>;
+            return (
+              <div 
+                key={idx} 
+                className="absolute top-0 h-full bg-blue-500 opacity-80 flex items-center justify-center text-white text-xs font-semibold"
+                style={{ left: `${leftPercent}%`, width: `${widthPercent}%` }}
+                title={`${m.title}: ${m.startBeirut.toLocaleTimeString('en-US', { hour12: false })} - ${m.endBeirut.toLocaleTimeString('en-US', { hour12: false })}`}
+              >
+              </div>
+            );
           })}
           <div className="absolute bottom-0 left-0 w-full flex justify-between px-1 text-xs text-gray-700">
-            {Array.from({ length: totalHours }, (_, i) => <span key={i}>{i}:00</span>)}
+            {Array.from({ length: 24 }, (_, i) => (
+              <span key={i} className={i % 2 === 0 ? "" : "text-gray-500"}>
+                {i.toString().padStart(2, '0')}:00
+              </span>
+            ))}
           </div>
         </div>
 
         {/* Mobile Timeline */}
-        <div className="md:hidden relative border rounded-lg overflow-hidden bg-gray-100 max-w-2xl mx-auto h-[300px]">
+        <div className="md:hidden relative border rounded-lg overflow-hidden bg-gray-100 max-w-2xl mx-auto h-[600px]">
           <div className="absolute inset-0 flex flex-col">
-            {Array.from({ length: totalHours }, (_, i) => (
+            {Array.from({ length: 24 }, (_, i) => (
               <div key={i} className="flex-1 border-t border-gray-300 relative"></div>
             ))}
           </div>
           {meetings.map((m, idx) => {
             const start = m.startBeirut.getHours() + m.startBeirut.getMinutes() / 60;
             const end = m.endBeirut.getHours() + m.endBeirut.getMinutes() / 60;
-            const topPercent = ((start - startHour) / totalHours) * 100;
+            const totalHours = 24;
+            const topPercent = (start / totalHours) * 100;
             const heightPercent = ((end - start) / totalHours) * 100;
-            return <div key={idx} className="absolute left-0 w-full bg-blue-500" style={{ top: `${topPercent}%`, height: `${heightPercent}%` }}></div>;
+            return (
+              <div 
+                key={idx} 
+                className="absolute left-0 w-full bg-blue-500 opacity-80"
+                style={{ top: `${topPercent}%`, height: `${heightPercent}%` }}
+              ></div>
+            );
           })}
-          <div className="absolute left-0 top-0 flex flex-col justify-between h-full px-1 text-xs text-gray-700">
-            {Array.from({ length: totalHours }, (_, i) => <span key={i}>{i}:00</span>)}
+          <div className="absolute left-0 top-0 flex flex-col justify-between h-full px-1 text-xs text-gray-700 bg-white bg-opacity-90 min-w-[60px]">
+            {Array.from({ length: 24 }, (_, i) => (
+              <span key={i} className="flex items-center h-full">
+                {i.toString().padStart(2, '0')}:00
+              </span>
+            ))}
           </div>
         </div>
 
