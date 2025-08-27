@@ -7,6 +7,7 @@ const API_BASE_URL = "https://localhost:7074"; // Use API base URL for file link
 function ActionItemsList({ meetingId }) {
   const [actionItems, setActionItems] = useState([]);
   const [newItem, setNewItem] = useState({ description: "", type: "", deadline: "", email: "" });
+  const [attachments, setAttachments] = useState([]); // <-- NEW: Store files
   const [users, setUsers] = useState([]);
   const [usersMap, setUsersMap] = useState({});
   const [meetingData, setMeetingData] = useState(null);
@@ -58,6 +59,7 @@ function ActionItemsList({ meetingId }) {
     if (!assignedUser) { setError("⚠️ User not found."); return; }
 
     try {
+      // Step 1: Create the action item
       const res = await axios.post(`/Meeting/${meetingId}/action-items`, {
         description: newItem.description,
         type: newItem.type,
@@ -65,21 +67,43 @@ function ActionItemsList({ meetingId }) {
         assignedToUserId: assignedUser.id
       });
 
-      setActionItems(prev => [...prev, res.data]);
-      setNewItem({ description: "", type: "", deadline: "", email: "" });
-      setSuggestions([]);
+      const createdItem = res.data;
+      setActionItems(prev => [...prev, createdItem]);
       setMessage("✅ Action item added!");
 
-      // Send notification
+      // Step 2: Upload attachments if any
+      if (attachments.length > 0) {
+        const formData = new FormData();
+        attachments.forEach(file => formData.append("files", file));
+
+        try {
+          await axios.post(
+            `/Meeting/${meetingId}/action-items/${createdItem.id}/assignment-attachments`,
+            formData,
+            { headers: { "Content-Type": "multipart/form-data" } }
+          );
+          setMessage("✅ Action item and attachments uploaded!");
+        } catch (uploadError) {
+          console.error(uploadError);
+          setError("⚠️ Action item created, but attachments failed to upload.");
+        }
+      }
+
+      // Step 3: Reset form
+      setNewItem({ description: "", type: "", deadline: "", email: "" });
+      setAttachments([]); // Clear files
+      setSuggestions([]);
+
+      // Step 4: Send notification
       if (meetingData) {
         try {
           await notificationService.notifyActionItemAssignment(
             assignedUser.id,
-            res.data,
-            meetingData.title || 'Meeting'
+            createdItem,
+            meetingData.title || "Meeting"
           );
         } catch (notifError) {
-          console.error('Failed to send notification:', notifError);
+          console.error("Failed to send notification:", notifError);
         }
       }
     } catch (err) {
@@ -118,60 +142,66 @@ function ActionItemsList({ meetingId }) {
   const otherItems = actionItems.filter(i => i.status !== "Submitted");
 
   const ActionItemCard = ({ item, showJudgmentButton = false }) => (
-    <div className="border rounded-lg p-4 mb-4 shadow-sm hover:shadow-md bg-white flex flex-col gap-3 transition">
-      <div className="flex flex-col sm:flex-row sm:justify-between">
-        <div className="flex-1">
-          <p className="font-semibold text-gray-900 break-words">{item.description}</p>
-          <p className="text-gray-700 text-sm">Type: {item.type || "Task"}</p>
-          <p className="text-gray-700 text-sm">Assigned To: {usersMap[item.assignedToUserId] || item.assignedToUserId}</p>
-          {showJudgmentButton ? (
-            <p className="text-gray-700 text-sm">Judgment: {item.judgment}</p>
-          ) : (
-            <p className="text-gray-700 text-sm">Status: {item.status}</p>
-          )}
+  <div className="border rounded-lg p-4 mb-4 shadow-sm hover:shadow-md bg-white flex flex-col gap-3 transition">
+    <div className="flex flex-col sm:flex-row sm:justify-between">
+      <div className="flex-1">
+        <p className="font-semibold text-gray-900 break-words">{item.description}</p>
+        <p className="text-gray-700 text-sm">Type: {item.type || "Task"}</p>
+        <p className="text-gray-700 text-sm">
+          Assigned To: {usersMap[item.assignedToUserId] || item.assignedToUserId}
+        </p>
+        {showJudgmentButton ? (
+          <p className="text-gray-700 text-sm">Judgment: {item.judgment}</p>
+        ) : (
+          <p className="text-gray-700 text-sm">Status: {item.status}</p>
+        )}
 
-          {/* Show uploaded submission files ONLY for submitted items */}
-          {item.status === "Submitted" && item.submissionAttachmentsUrl?.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {item.submissionAttachmentsUrl.map((fileUrl, index) => {
-                const fileName = fileUrl.split("/").pop();
-                return (
-                  <a
-                    key={index}
-                    href={`${API_BASE_URL}${fileUrl}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm hover:bg-blue-200 transition"
-                  >
-                    {fileName}
-                  </a>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {showJudgmentButton && (
-          <div className="mt-3 sm:mt-0 sm:ml-4 flex flex-col gap-2">
-            <button
-              onClick={() => toggleJudgment(item.id)}
-              className={`px-3 py-1 rounded text-white font-medium text-sm ${
-                item.judgment === "Accepted" ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"
-              }`}
-            >
-              {item.judgment === "Accepted" ? "Reject" : "Accept"}
-            </button>
-            <button
-              onClick={() => deleteActionItem(item.id)}
-              className="px-3 py-1 rounded text-white font-medium text-sm bg-gray-500 hover:bg-gray-600"
-            >
-              Delete
-            </button>
+        {/* Show uploaded submission files ONLY for submitted items */}
+        {item.status === "Submitted" && item.submissionAttachmentsUrl?.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {item.submissionAttachmentsUrl.map((fileUrl, index) => {
+              const fileName = fileUrl.split("/").pop();
+              return (
+                <a
+                  key={index}
+                  href={`${API_BASE_URL}${fileUrl}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm hover:bg-blue-200 transition"
+                >
+                  {fileName}
+                </a>
+              );
+            })}
           </div>
         )}
       </div>
+
+      {/* Buttons Section (Judgment if applicable, Delete always) */}
+      <div className="mt-3 sm:mt-0 sm:ml-4 flex flex-col gap-2">
+        {showJudgmentButton && (
+          <button
+            onClick={() => toggleJudgment(item.id)}
+            className={`px-3 py-1 rounded text-white font-medium text-sm ${
+              item.judgment === "Accepted"
+                ? "bg-red-500 hover:bg-red-600"
+                : "bg-green-500 hover:bg-green-600"
+            }`}
+          >
+            {item.judgment === "Accepted" ? "Reject" : "Accept"}
+          </button>
+        )}
+        <button
+          onClick={() => deleteActionItem(item.id)}
+          className="px-3 py-1 rounded text-white font-medium text-sm bg-gray-500 hover:bg-gray-600"
+        >
+          Delete
+        </button>
+      </div>
     </div>
-  );
+  </div>
+);
+
 
   return (
     <div className="p-6 border rounded-lg mb-6 bg-gray-50 shadow-md max-w-5xl mx-auto">
@@ -224,6 +254,34 @@ function ActionItemsList({ meetingId }) {
             </ul>
           )}
         </div>
+
+        {/* Attachments input */}
+       <div className="flex flex-col gap-2">
+  <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 border rounded px-4 py-2 text-center text-gray-700 font-medium transition">
+    Choose Files
+    <input
+      type="file"
+      multiple
+      onChange={e => setAttachments(Array.from(e.target.files))}
+      className="hidden"
+    />
+  </label>
+
+  {attachments.length > 0 && (
+    <div className="flex flex-wrap gap-2">
+      {attachments.map((file, index) => (
+        <span
+          key={index}
+          className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded"
+        >
+          {file.name}
+        </span>
+      ))}
+    </div>
+  )}
+</div>
+
+
         <button
           onClick={addActionItem}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition mt-1 self-start"

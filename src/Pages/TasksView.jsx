@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import axios from "../api/axiosInstance";
 import ViewHeader from "../Components/ViewHeader.jsx";
 
+const API_BASE_URL = "https://localhost:7074"; // Add this for file links
+
 const convertUTCToBeirut = (utcString) => {
   if (!utcString) return null;
   const utcDate = new Date(utcString);
@@ -96,6 +98,26 @@ function TasksView() {
                       <span className="text-green-600 font-medium">{ai.status}</span>
                     </p>
                   </div>
+
+                  {/* Show submission attachments if available */}
+                  {ai.submissionAttachmentsUrl?.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {ai.submissionAttachmentsUrl.map((fileUrl, index) => {
+                        const fileName = fileUrl.split("/").pop();
+                        return (
+                          <a
+                            key={index}
+                            href={`${API_BASE_URL}${fileUrl}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm hover:bg-blue-200 transition"
+                          >
+                            {fileName}
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -136,6 +158,26 @@ function TasksView() {
                           </span>
                         </p>
                       </div>
+                      {console.log(ai)}
+                      {/* Show submission attachments if available */}
+                      {ai.assignmentAttachmentsUrl?.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {ai.assignmentAttachmentsUrl.map((fileUrl, index) => {
+                            const fileName = fileUrl.split("/").pop();
+                            return (
+                              <a
+                                key={index}
+                                href={`${API_BASE_URL}${fileUrl}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm hover:bg-blue-200 transition"
+                              >
+                                {fileName}
+                              </a>
+                            );
+                          })}
+                        </div>
+                      )}
 
                       {/* Upload files only if Pending */}
                       {ai.status === "Pending" && (
