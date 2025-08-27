@@ -26,7 +26,7 @@ function ProfileMain() {
 
     fetchUser();
   }, []);
-console.log(user);
+  console.log(user);
   if (loading) return <p className="text-center mt-10">Loading...</p>;
   if (error) return <p className="text-center mt-10 text-red-500">{error}</p>;
 
@@ -52,7 +52,8 @@ console.log(user);
         </p>
 
         <p className="text-gray-600">
-          Roles: {user.roles?.length > 0 ? user.roles.join(", ") : "No roles assigned"}
+          Roles:{" "}
+          {user.roles?.length > 0 ? user.roles.join(", ") : "No roles assigned"}
         </p>
 
         <div className="mt-6 flex flex-col md:flex-row gap-4 w-full">
@@ -65,7 +66,8 @@ console.log(user);
             onClick={() => {
               localStorage.removeItem("token");
               localStorage.removeItem("user");
-              window.location.href = "/login";
+              localStorage.removeItem("isAdmin");
+              window.location.href = "/";
             }}
           >
             <FiLogOut size={20} />
