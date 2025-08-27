@@ -55,7 +55,7 @@ function RoomDisplay() {
                 const imageSrc = room.imageUrl
                   ? `https://localhost:7074${room.imageUrl}`
                   : DefaultRoomImage;
-
+                  console.log(imageSrc);
                 return (
                   <Link to={`/room/${room.id}`} key={room.id}>
                     <Card
