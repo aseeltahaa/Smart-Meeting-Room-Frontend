@@ -191,6 +191,9 @@ function RoomInfo() {
   if (loading) return <p>Loading room info...</p>;
   if (error) return <p className="text-red-500">{error}</p>;
 
+  const totalHours = 24;
+  const startHour = 0;
+
   return (
     <>
       <Header />
@@ -233,40 +236,38 @@ function RoomInfo() {
         {/* Desktop Timeline */}
         <div className="hidden md:block relative border rounded-lg overflow-hidden bg-gray-100 max-w-5xl mx-auto h-20">
           <div className="absolute inset-0 flex">
-            {Array.from({ length: 11 }, (_, i) => (
+            {Array.from({ length: totalHours }, (_, i) => (
               <div key={i} className="flex-1 border-l border-gray-300 relative"></div>
             ))}
           </div>
           {meetings.map((m, idx) => {
             const start = m.startBeirut.getHours() + m.startBeirut.getMinutes() / 60;
             const end = m.endBeirut.getHours() + m.endBeirut.getMinutes() / 60;
-            const totalHours = 11;
-            const leftPercent = ((start - 8) / totalHours) * 100;
+            const leftPercent = ((start - startHour) / totalHours) * 100;
             const widthPercent = ((end - start) / totalHours) * 100;
             return <div key={idx} className="absolute top-0 h-full bg-blue-500" style={{ left: `${leftPercent}%`, width: `${widthPercent}%` }}></div>;
           })}
           <div className="absolute bottom-0 left-0 w-full flex justify-between px-1 text-xs text-gray-700">
-            {Array.from({ length: 11 }, (_, i) => <span key={i}>{8 + i}:00</span>)}
+            {Array.from({ length: totalHours }, (_, i) => <span key={i}>{i}:00</span>)}
           </div>
         </div>
 
         {/* Mobile Timeline */}
         <div className="md:hidden relative border rounded-lg overflow-hidden bg-gray-100 max-w-2xl mx-auto h-[300px]">
           <div className="absolute inset-0 flex flex-col">
-            {Array.from({ length: 11 }, (_, i) => (
+            {Array.from({ length: totalHours }, (_, i) => (
               <div key={i} className="flex-1 border-t border-gray-300 relative"></div>
             ))}
           </div>
           {meetings.map((m, idx) => {
             const start = m.startBeirut.getHours() + m.startBeirut.getMinutes() / 60;
             const end = m.endBeirut.getHours() + m.endBeirut.getMinutes() / 60;
-            const totalHours = 11;
-            const topPercent = ((start - 8) / totalHours) * 100;
+            const topPercent = ((start - startHour) / totalHours) * 100;
             const heightPercent = ((end - start) / totalHours) * 100;
             return <div key={idx} className="absolute left-0 w-full bg-blue-500" style={{ top: `${topPercent}%`, height: `${heightPercent}%` }}></div>;
           })}
           <div className="absolute left-0 top-0 flex flex-col justify-between h-full px-1 text-xs text-gray-700">
-            {Array.from({ length: 11 }, (_, i) => <span key={i}>{8 + i}:00</span>)}
+            {Array.from({ length: totalHours }, (_, i) => <span key={i}>{i}:00</span>)}
           </div>
         </div>
 

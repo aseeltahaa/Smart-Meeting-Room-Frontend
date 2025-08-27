@@ -123,8 +123,12 @@ function Header({ showSearchBar = false, showGradient = true }) {
           {isLoggedIn && (
             <Link to="/notifications" className="flex items-center relative">
               <FiBell
+                className={
+                  showGradient
+                    ? "text-white hover:text-gray-200 transition-colors duration-300 ease-in-out mr-2"
+                    : "text-black hover:text-gray-700 transition-colors duration-300 ease-in-out mr-2"
+                }
                 size={24}
-                className="text-black hover:text-gray-700 transition-colors duration-300 ease-in-out mr-2"
               />
               {hasUnread && (
                 <span className="absolute top-0 right-0 block w-2 h-2 rounded-full bg-red-500 ring-1 ring-white"></span>
@@ -153,8 +157,12 @@ function Header({ showSearchBar = false, showGradient = true }) {
             {isLoggedIn && (
               <Link to="/notifications" className="flex items-center relative">
                 <FiBell
+                  className={
+                    showGradient
+                      ? "text-white hover:text-gray-200 transition-colors duration-300 ease-in-out"
+                      : "text-black hover:text-gray-700 transition-colors duration-300 ease-in-out"
+                  }
                   size={24}
-                  className="text-black hover:text-gray-700 transition-colors duration-300 ease-in-out"
                 />
                 {hasUnread && (
                   <span className="absolute top-0 right-0 block w-2 h-2 rounded-full bg-red-500 ring-1 ring-white"></span>
