@@ -22,7 +22,7 @@ function MeetingHeader({ meetingId }) {
         style={{ maxWidth: "1200px", color: "#111" }}
       >
         <div className="flex justify-center items-center relative">
-          <Link to="/RoomDisplay">
+          <Link to="/">
             <img
               src={logo}
               alt="Logo"

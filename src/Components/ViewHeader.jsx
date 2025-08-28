@@ -18,7 +18,7 @@ function ViewHeader({ meetingId }) {
     <div className="relative" style={{ top: "-25px" }}>
       <header className="relative z-50 mx-auto px-6 py-10 flex justify-between items-center text-black" style={{ maxWidth: "1200px", color: "#111" }}>
         <div className="flex justify-center items-center relative">
-          <Link to="/RoomDisplay">
+          <Link to="/">
             <img src={logo} alt="Logo" style={{ marginRight: "50px", width: "50px" }} />
           </Link>
           <nav className="hidden md:inline">
