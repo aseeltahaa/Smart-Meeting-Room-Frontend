@@ -7,6 +7,7 @@ import DefaultRoomImage from '../assets/room.jpg'; // fallback
 
 function RoomDisplay() {
   const [rooms, setRooms] = useState([]);
+  const [filteredRooms, setFilteredRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -30,7 +31,9 @@ function RoomDisplay() {
         return res.json();
       })
       .then((data) => {
-        setRooms(Array.isArray(data) ? data : []);
+        const roomList = Array.isArray(data) ? data : [];
+        setRooms(roomList);
+        setFilteredRooms(roomList);
         setLoading(false);
       })
       .catch((err) => {
@@ -40,22 +43,31 @@ function RoomDisplay() {
       });
   }, []);
 
+  const handleSearch = (query) => {
+    const filtered = rooms.filter(room =>
+      room.name.toLowerCase().includes(query.toLowerCase())
+    );
+    setFilteredRooms(filtered);
+  };
+
   return (
     <>
-      <Header showSearchBar={true} showGradient={false} />
+      <Header showSearchBar={true} showGradient={false} onSearch={handleSearch} />
+
       <section className="mt-[-60px] mb-16 sm:mb-24 lg:mb-32">
-        <div className="p-4 sm:p-8 flex items-center justify-center">
+        <div className="p-4 sm:p-8 flex flex-col items-center justify-center">
           {loading ? (
             <p>Loading rooms...</p>
           ) : error ? (
             <p className="text-red-500">{error}</p>
+          ) : filteredRooms.length === 0 ? (
+            <p>No rooms found.</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl w-full">
-              {rooms.map((room) => {
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl w-full mt-4">
+              {filteredRooms.map((room) => {
                 const imageSrc = room.imageUrl
                   ? `https://localhost:7074${room.imageUrl}`
                   : DefaultRoomImage;
-                  console.log(imageSrc);
                 return (
                   <Link to={`/room/${room.id}`} key={room.id}>
                     <Card

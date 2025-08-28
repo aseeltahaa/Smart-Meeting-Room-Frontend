@@ -5,14 +5,13 @@ import logo from "../assets/logo.png";
 import RoomSearchBar from "./RoomSearchBar";
 import api from "../api/axiosInstance";
 
-function Header({ showSearchBar = false, showGradient = true }) {
+function Header({ showSearchBar = false, showGradient = true, onSearch }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
 
   const isLoggedIn = Boolean(localStorage.getItem("token"));
 
-  // Fetch user role
   const fetchUserRole = async () => {
     if (!isLoggedIn) {
       setIsAdmin(false);
@@ -40,11 +39,10 @@ function Header({ showSearchBar = false, showGradient = true }) {
     }
   };
 
-  // Fetch unread notifications
   const fetchUnreadNotifications = async () => {
     if (!isLoggedIn) return;
     try {
-      const res = await api.get("/Notifications"); // or your endpoint for notifications
+      const res = await api.get("/Notifications"); // endpoint for notifications
       const unreadCount = res.data.filter(n => !n.isRead).length;
       setHasUnread(unreadCount > 0);
     } catch (err) {
@@ -78,9 +76,7 @@ function Header({ showSearchBar = false, showGradient = true }) {
       )}
 
       <header
-        className={`relative z-50 mx-auto px-6 py-10 flex justify-between items-center ${
-          showGradient ? "" : "text-black"
-        }`}
+        className={`relative z-50 mx-auto px-6 py-10 flex justify-between items-center ${showGradient ? "" : "text-black"}`}
         style={{ maxWidth: "1200px", color: showGradient ? undefined : "#111" }}
       >
         <div className="flex justify-center items-center relative">
@@ -118,16 +114,12 @@ function Header({ showSearchBar = false, showGradient = true }) {
         </div>
 
         <div className="hidden md:flex items-center gap-4 relative">
-          {showSearchBar && <RoomSearchBar />}
+          {showSearchBar && <RoomSearchBar onSearch={onSearch} />}
 
           {isLoggedIn && (
             <Link to="/notifications" className="flex items-center relative">
               <FiBell
-                className={
-                  showGradient
-                    ? "text-white hover:text-gray-200 transition-colors duration-300 ease-in-out mr-2"
-                    : "text-black hover:text-gray-700 transition-colors duration-300 ease-in-out mr-2"
-                }
+                className={showGradient ? "text-white hover:text-gray-200 transition-colors duration-300" : "text-black hover:text-gray-700 transition-colors duration-300"}
                 size={24}
               />
               {hasUnread && (
@@ -138,13 +130,13 @@ function Header({ showSearchBar = false, showGradient = true }) {
 
           {isLoggedIn ? (
             <Link to="/profile">
-              <button className="border-none rounded-full py-3 px-5 text-lg cursor-pointer bg-[#539D98] hover:bg-[#437e79] transition-colors duration-300 ease-in-out text-white">
+              <button className="border-none rounded-full py-3 px-5 text-lg cursor-pointer bg-[#539D98] hover:bg-[#437e79] transition-colors duration-300 text-white">
                 Profile
               </button>
             </Link>
           ) : (
             <Link to="/Login">
-              <button className="border-none rounded-full py-3 px-5 text-lg cursor-pointer bg-[#539D98] hover:bg-[#437e79] transition-colors duration-300 ease-in-out text-white">
+              <button className="border-none rounded-full py-3 px-5 text-lg cursor-pointer bg-[#539D98] hover:bg-[#437e79] transition-colors duration-300 text-white">
                 Login
               </button>
             </Link>
@@ -157,11 +149,7 @@ function Header({ showSearchBar = false, showGradient = true }) {
             {isLoggedIn && (
               <Link to="/notifications" className="flex items-center relative">
                 <FiBell
-                  className={
-                    showGradient
-                      ? "text-white hover:text-gray-200 transition-colors duration-300 ease-in-out"
-                      : "text-black hover:text-gray-700 transition-colors duration-300 ease-in-out"
-                  }
+                  className={showGradient ? "text-white hover:text-gray-200 transition-colors duration-300" : "text-black hover:text-gray-700 transition-colors duration-300"}
                   size={24}
                 />
                 {hasUnread && (
@@ -192,6 +180,7 @@ function Header({ showSearchBar = false, showGradient = true }) {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="fixed top-0 right-0 h-full w-3/4 bg-white bg-opacity-80 z-70 flex flex-col items-center justify-center md:hidden transition-all duration-300 ease-in-out">
+          {showSearchBar && <div className="mb-4 w-full px-6"><RoomSearchBar onSearch={onSearch} /></div>}
           <nav className="flex flex-col gap-8">
             <Link to="/" className="text-xl flex items-center gap-2" onClick={() => setMenuOpen(false)}>
               <FiHome size={22} /> Home
