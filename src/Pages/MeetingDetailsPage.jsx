@@ -2,6 +2,7 @@ import { useParams } from "react-router-dom";
 import EditMeetingForm from '../Components/EditMeetingForm.jsx';
 import Footer from '../Components/Footer.jsx';
 import MeetingHeader from '../Components/MeetingHeader.jsx';
+import MeetingFileUpload from "../Components/MeetingFileUpload.jsx";
 
 function MeetingDetailsPage() {
   const { id } = useParams();
@@ -10,7 +11,7 @@ function MeetingDetailsPage() {
     return (
       <>
         <MeetingHeader />
-        <div className="max-w-3xl mx-auto mt-6">
+        <div className="max-w-3xl mx-auto mt-12 p-4 bg-red-50 rounded shadow">
           <p className="text-red-600 font-semibold text-center">❌ Invalid meeting ID</p>
         </div>
         <Footer />
@@ -22,10 +23,22 @@ function MeetingDetailsPage() {
     <>
       <MeetingHeader meetingId={id} initialTab="details" />
 
-      <div className="max-w-6xl mx-auto mt-8 px-4 md:px-0 space-y-8">
+      <main className="max-w-6xl mx-auto mt-8 px-4 md:px-0 space-y-12">
+        {/* Edit Meeting Form */}
+        <section className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800">Edit Meeting</h2>
           <EditMeetingForm meetingId={id} />
-        <div className="h-16" />
-      </div>
+        </section>
+
+        {/* File Upload Section */}
+        <section className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800">Upload Attachments</h2>
+          <MeetingFileUpload meetingId={id} />
+        </section>
+      </main>
+
+      {/* Add extra spacing before footer */}
+      <div className="h-24" />
 
       <Footer />
     </>
