@@ -1,27 +1,31 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 
 const MeetingHeatmap = () => {
-  // Generate fake data for the past year
-  const generateFakeData = () => {
-    const data = {};
-    const today = new Date();
-    const oneYearAgo = new Date(today);
-    oneYearAgo.setFullYear(today.getFullYear() - 1);
+  const [meetingData, setMeetingData] = useState({});
+  const [loading, setLoading] = useState(true);
 
-    // Start from the beginning of the week that contains one year ago
-    const startDate = new Date(oneYearAgo);
-    startDate.setDate(startDate.getDate() - startDate.getDay());
-
-    for (let d = new Date(startDate); d <= today; d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toISOString().split("T")[0];
-      const meetingCount = Math.random() < 0.3 ? 0 : Math.floor(Math.random() * 8) + 1;
-      data[dateStr] = meetingCount;
-    }
-
-    return data;
-  };
-
-  const [meetingData] = useState(generateFakeData());
+  // Fetch real data from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch(
+          "https://localhost:7074/api/Users/me/meetings/heatmap",
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`, // replace with your token logic
+            },
+          }
+        );
+        const data = await res.json();
+        setMeetingData(data);
+      } catch (err) {
+        console.error("Error fetching meeting heatmap data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -30,50 +34,43 @@ const MeetingHeatmap = () => {
     const activeDays = values.filter((count) => count > 0).length;
     const maxStreak = calculateMaxStreak(meetingData);
     const currentStreak = calculateCurrentStreak(meetingData);
-
     return { totalMeetings, activeDays, maxStreak, currentStreak };
   }, [meetingData]);
 
   function calculateMaxStreak(data) {
     const dates = Object.keys(data).sort();
     let maxStreak = 0;
-    let currentStreak = 0;
-
-    for (const date of dates) {
-      if (data[date] > 0) {
-        currentStreak++;
-        maxStreak = Math.max(maxStreak, currentStreak);
-      } else {
-        currentStreak = 0;
-      }
+    let streak = 0;
+    for (const d of dates) {
+      if (data[d] > 0) streak++;
+      else streak = 0;
+      maxStreak = Math.max(maxStreak, streak);
     }
-
     return maxStreak;
   }
 
   function calculateCurrentStreak(data) {
     const dates = Object.keys(data).sort().reverse();
     let streak = 0;
-
-    for (const date of dates) {
-      if (data[date] > 0) streak++;
+    for (const d of dates) {
+      if (data[d] > 0) streak++;
       else break;
     }
-
     return streak;
   }
 
-  // Get color intensity based on meeting count
-  const getIntensity = (count) => {
-    if (count === 0) return "bg-gray-100 dark:bg-gray-800";
-    if (count <= 2) return "bg-blue-200 dark:bg-blue-900";
-    if (count <= 4) return "bg-blue-400 dark:bg-blue-700";
-    if (count <= 6) return "bg-blue-600 dark:bg-blue-500";
-    return "bg-blue-800 dark:bg-blue-300";
-  };
+// Color based on meeting count
+const getIntensity = (count) => {
+  if (count === 0) return "bg-gray-100 dark:bg-gray-200";
+  if (count <= 2) return "bg-blue-200 dark:bg-blue-900";
+  if (count <= 4) return "bg-blue-400 dark:bg-blue-700";
+  if (count <= 6) return "bg-blue-600 dark:bg-blue-500";
+  return "bg-blue-800 dark:bg-blue-300";
+};
 
-  // Generate grid data organized by months
-  const generateMonthlyGrid = () => {
+
+  // Generate grid organized by months
+  const monthlyData = useMemo(() => {
     const today = new Date();
     const oneYearAgo = new Date(today);
     oneYearAgo.setFullYear(today.getFullYear() - 1);
@@ -84,7 +81,11 @@ const MeetingHeatmap = () => {
 
     while (currentDate <= today) {
       const monthStart = new Date(currentDate);
-      const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+      const monthEnd = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth() + 1,
+        0
+      );
       if (monthEnd > today) monthEnd.setTime(today.getTime());
 
       const firstDay = new Date(monthStart);
@@ -98,14 +99,18 @@ const MeetingHeatmap = () => {
       const weeks = [];
       let currentWeek = [];
 
-      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+      for (
+        let d = new Date(startDate);
+        d <= endDate;
+        d.setDate(d.getDate() + 1)
+      ) {
         const dateStr = d.toISOString().split("T")[0];
         const dayOfWeek = d.getDay();
-        const isCurrentMonth = d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
+        const isCurrentMonth = d.getMonth() === currentDate.getMonth();
 
         currentWeek.push({
           date: dateStr,
-          count: isCurrentMonth ? meetingData[dateStr] || 0 : 0,
+          count: meetingData[dateStr] || 0, // include all API days
           dayOfWeek,
           isCurrentMonth,
         });
@@ -118,7 +123,10 @@ const MeetingHeatmap = () => {
       if (currentWeek.length > 0) weeks.push([...currentWeek]);
 
       months.push({
-        name: currentDate.toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+        name: currentDate.toLocaleDateString("en-US", {
+          month: "short",
+          year: "numeric",
+        }),
         shortName: currentDate.toLocaleDateString("en-US", { month: "short" }),
         weeks,
       });
@@ -127,9 +135,10 @@ const MeetingHeatmap = () => {
     }
 
     return months;
-  };
+  }, [meetingData]);
 
-  const monthlyData = generateMonthlyGrid();
+  if (loading)
+    return <div className="text-center py-10">Loading heatmap...</div>;
 
   return (
     <div className="flex justify-center my-6 px-3">
@@ -138,20 +147,36 @@ const MeetingHeatmap = () => {
         <div className="mb-4 sm:mb-6 flex justify-center">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 text-sm text-center">
             <div>
-              <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.totalMeetings}</div>
-              <div className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">meetings attended</div>
+              <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {stats.totalMeetings}
+              </div>
+              <div className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
+                meetings attended
+              </div>
             </div>
             <div>
-              <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.activeDays}</div>
-              <div className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">active days</div>
+              <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {stats.activeDays}
+              </div>
+              <div className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
+                active days
+              </div>
             </div>
             <div>
-              <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.maxStreak}</div>
-              <div className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">longest streak</div>
+              <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {stats.maxStreak}
+              </div>
+              <div className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
+                longest streak
+              </div>
             </div>
             <div>
-              <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.currentStreak}</div>
-              <div className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">current streak</div>
+              <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {stats.currentStreak}
+              </div>
+              <div className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
+                current streak
+              </div>
             </div>
           </div>
         </div>
@@ -199,15 +224,23 @@ const MeetingHeatmap = () => {
                     {month.weeks.map((week, weekIndex) => (
                       <div key={weekIndex} className="flex flex-col gap-1">
                         {Array.from({ length: 7 }, (_, dayIndex) => {
-                          const day = week.find((d) => d.dayOfWeek === dayIndex);
-                          const isVisible = day && day.isCurrentMonth;
+                          const day = week.find(
+                            (d) => d.dayOfWeek === dayIndex
+                          );
+                          if (!day)
+                            return (
+                              <div
+                                key={dayIndex}
+                                className="w-2.5 h-2.5 sm:w-3 sm:h-3"
+                              ></div>
+                            );
                           return (
                             <div
                               key={dayIndex}
-                              className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm transition-all active:scale-95 sm:hover:ring-2 sm:hover:ring-blue-300 sm:dark:hover:ring-blue-600 ${
-                                isVisible ? getIntensity(day.count) : "bg-gray-100 dark:bg-gray-800 opacity-30"
-                              }`}
-                              title={isVisible ? `${day.date}: ${day.count} meetings` : ""}
+                              className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm transition-all active:scale-95 sm:hover:ring-2 sm:hover:ring-blue-300 sm:dark:hover:ring-blue-600 ${getIntensity(
+                                day.count
+                              )}`}
+                              title={`${day.date}: ${day.count} meetings`}
                             />
                           );
                         })}
@@ -226,7 +259,7 @@ const MeetingHeatmap = () => {
           <div className="flex items-center gap-2">
             <span>Less</span>
             <div className="flex gap-1">
-              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-gray-100 dark:bg-gray-800"></div>
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-gray-200 dark:bg-gray-700"></div>
               <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-blue-200 dark:bg-blue-900"></div>
               <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-blue-400 dark:bg-blue-700"></div>
               <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-blue-600 dark:bg-blue-500"></div>
