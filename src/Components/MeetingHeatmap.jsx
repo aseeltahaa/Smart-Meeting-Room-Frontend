@@ -4,7 +4,7 @@ const MeetingHeatmap = () => {
   const [meetingData, setMeetingData] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // Fetch real data from API
+  // Fetch data from API
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -12,7 +12,7 @@ const MeetingHeatmap = () => {
           "https://localhost:7074/api/Users/me/meetings/heatmap",
           {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`, // replace with your token logic
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
           }
         );
@@ -39,8 +39,8 @@ const MeetingHeatmap = () => {
 
   function calculateMaxStreak(data) {
     const dates = Object.keys(data).sort();
-    let maxStreak = 0;
-    let streak = 0;
+    let maxStreak = 0,
+      streak = 0;
     for (const d of dates) {
       if (data[d] > 0) streak++;
       else streak = 0;
@@ -59,86 +59,57 @@ const MeetingHeatmap = () => {
     return streak;
   }
 
-// Color based on meeting count
-const getIntensity = (count) => {
-  if (count === 0) return "bg-gray-100 dark:bg-gray-200";
-  if (count <= 2) return "bg-blue-200 dark:bg-blue-900";
-  if (count <= 4) return "bg-blue-400 dark:bg-blue-700";
-  if (count <= 6) return "bg-blue-600 dark:bg-blue-500";
-  return "bg-blue-800 dark:bg-blue-300";
-};
+  const getIntensity = (count) => {
+    if (count === 0) return "bg-gray-100 dark:bg-gray-200";
+    if (count <= 2) return "bg-blue-200 dark:bg-blue-900";
+    if (count <= 4) return "bg-blue-400 dark:bg-blue-700";
+    if (count <= 6) return "bg-blue-600 dark:bg-blue-500";
+    return "bg-blue-800 dark:bg-blue-300";
+  };
 
-
-  // Generate grid organized by months
+  // Generate fixed 4x7 grid per month
   const monthlyData = useMemo(() => {
     const today = new Date();
-    const oneYearAgo = new Date(today);
-    oneYearAgo.setFullYear(today.getFullYear() - 1);
-
+    const year = today.getFullYear();
     const months = [];
-    let currentDate = new Date(oneYearAgo);
-    currentDate.setDate(1);
 
-    while (currentDate <= today) {
-      const monthStart = new Date(currentDate);
-      const monthEnd = new Date(
-        currentDate.getFullYear(),
-        currentDate.getMonth() + 1,
-        0
-      );
-      if (monthEnd > today) monthEnd.setTime(today.getTime());
+    for (let month = 0; month < 12; month++) {
+      const monthStart = new Date(year, month, 1);
+      const monthEnd = new Date(year, month + 1, 0);
+      const daysInMonth = monthEnd.getDate();
 
-      const firstDay = new Date(monthStart);
-      const startDate = new Date(firstDay);
-      startDate.setDate(startDate.getDate() - startDate.getDay());
+      // Create 4x7 grid (4 columns, 7 rows)
+      const grid = Array.from({ length: 7 }, () => Array(4).fill(null));
 
-      const lastDay = new Date(monthEnd);
-      const endDate = new Date(lastDay);
-      endDate.setDate(endDate.getDate() + (6 - lastDay.getDay()));
-
-      const weeks = [];
-      let currentWeek = [];
-
-      for (
-        let d = new Date(startDate);
-        d <= endDate;
-        d.setDate(d.getDate() + 1)
-      ) {
-        const dateStr = d.toISOString().split("T")[0];
-        const dayOfWeek = d.getDay();
-        const isCurrentMonth = d.getMonth() === currentDate.getMonth();
-
-        currentWeek.push({
-          date: dateStr,
-          count: meetingData[dateStr] || 0, // include all API days
-          dayOfWeek,
-          isCurrentMonth,
-        });
-
-        if (dayOfWeek === 6) {
-          weeks.push([...currentWeek]);
-          currentWeek = [];
+      let dayCounter = 1;
+      for (let col = 0; col < 4; col++) {
+        for (let row = 0; row < 7; row++) {
+          if (dayCounter <= daysInMonth) {
+            const date = new Date(year, month, dayCounter);
+            const dateStr = date.toISOString().split("T")[0];
+            grid[row][col] = {
+              date: dateStr,
+              count: meetingData[dateStr] || 0,
+            };
+            dayCounter++;
+          }
         }
       }
-      if (currentWeek.length > 0) weeks.push([...currentWeek]);
 
       months.push({
-        name: currentDate.toLocaleDateString("en-US", {
+        name: monthStart.toLocaleDateString("en-US", {
           month: "short",
           year: "numeric",
         }),
-        shortName: currentDate.toLocaleDateString("en-US", { month: "short" }),
-        weeks,
+        shortName: monthStart.toLocaleDateString("en-US", { month: "short" }),
+        grid, // 7 rows × 4 columns
       });
-
-      currentDate.setMonth(currentDate.getMonth() + 1);
     }
 
     return months;
   }, [meetingData]);
 
-  if (loading)
-    return <div className="text-center py-10">Loading heatmap...</div>;
+  if (loading) return <div className="text-center py-10">Loading heatmap...</div>;
 
   return (
     <div className="flex justify-center my-6 px-3">
@@ -146,109 +117,64 @@ const getIntensity = (count) => {
         {/* Header Stats */}
         <div className="mb-4 sm:mb-6 flex justify-center">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 text-sm text-center">
-            <div>
-              <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {stats.totalMeetings}
+            {[
+              { value: stats.totalMeetings, label: "meetings attended" },
+              { value: stats.activeDays, label: "active days" },
+              { value: stats.maxStreak, label: "longest streak" },
+              { value: stats.currentStreak, label: "current streak" },
+            ].map((stat, idx) => (
+              <div key={idx}>
+                <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {stat.value}
+                </div>
+                <div className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
+                  {stat.label}
+                </div>
               </div>
-              <div className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
-                meetings attended
-              </div>
-            </div>
-            <div>
-              <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {stats.activeDays}
-              </div>
-              <div className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
-                active days
-              </div>
-            </div>
-            <div>
-              <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {stats.maxStreak}
-              </div>
-              <div className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
-                longest streak
-              </div>
-            </div>
-            <div>
-              <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {stats.currentStreak}
-              </div>
-              <div className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
-                current streak
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
         {/* Heatmap */}
-        <div className="overflow-x-auto overflow-y-hidden pb-2">
-          <div className="inline-block min-w-full">
-            {/* Month labels */}
-            <div className="flex mb-1 sm:mb-2">
-              <div className="w-6 sm:w-8 flex-shrink-0"></div>
-              {monthlyData.map((month, monthIndex) => {
-                const monthWidth = month.weeks.length * (12 + 4);
-                return (
-                  <div
-                    key={monthIndex}
-                    className="flex-shrink-0 text-xs text-gray-600 dark:text-gray-400 text-left px-1"
-                    style={{ width: monthWidth + "px" }}
-                  >
+        <div className="flex justify-center overflow-x-auto overflow-y-hidden pb-2">
+          <div className="inline-block">
+            <div className="flex">
+              {monthlyData.map((month, monthIndex) => (
+                <div
+                  key={monthIndex}
+                  className="flex flex-col items-center mr-6 last:mr-0 flex-shrink-0"
+                >
+                  {/* Month label */}
+                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-1 sm:mb-2">
                     {month.shortName}
                   </div>
-                );
-              })}
-            </div>
 
-            <div className="flex">
-              {/* Day labels */}
-              <div className="flex flex-col mr-1 sm:mr-2 flex-shrink-0">
-                {["", "M", "", "W", "", "F", ""].map((day, index) => (
-                  <div
-                    key={index}
-                    className="h-2.5 sm:h-3 mb-1 text-xs text-gray-600 dark:text-gray-400 leading-3 w-4 sm:w-6"
-                  >
-                    <span className="hidden sm:inline">
-                      {["", "Mon", "", "Wed", "", "Fri", ""][index]}
-                    </span>
-                    <span className="sm:hidden">{day}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Grid */}
-              <div className="flex">
-                {monthlyData.map((month, monthIndex) => (
-                  <div key={monthIndex} className="flex gap-1 mr-1 sm:mr-2">
-                    {month.weeks.map((week, weekIndex) => (
-                      <div key={weekIndex} className="flex flex-col gap-1">
-                        {Array.from({ length: 7 }, (_, dayIndex) => {
-                          const day = week.find(
-                            (d) => d.dayOfWeek === dayIndex
-                          );
-                          if (!day)
-                            return (
-                              <div
-                                key={dayIndex}
-                                className="w-2.5 h-2.5 sm:w-3 sm:h-3"
-                              ></div>
-                            );
-                          return (
+                  {/* 4x7 grid */}
+                  <div className="flex gap-1">
+                    {Array.from({ length: 4 }, (_, colIndex) => (
+                      <div key={colIndex} className="flex flex-col gap-1">
+                        {Array.from({ length: 7 }, (_, rowIndex) => {
+                          const cell = month.grid[rowIndex][colIndex];
+                          return cell ? (
                             <div
-                              key={dayIndex}
+                              key={rowIndex}
                               className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm transition-all active:scale-95 sm:hover:ring-2 sm:hover:ring-blue-300 sm:dark:hover:ring-blue-600 ${getIntensity(
-                                day.count
+                                cell.count
                               )}`}
-                              title={`${day.date}: ${day.count} meetings`}
+                              title={`${cell.date}: ${cell.count} meetings`}
                             />
+                          ) : (
+                            <div
+                              key={rowIndex}
+                              className="w-2.5 h-2.5 sm:w-3 sm:h-3"
+                            ></div>
                           );
                         })}
                       </div>
                     ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -259,7 +185,7 @@ const getIntensity = (count) => {
           <div className="flex items-center gap-2">
             <span>Less</span>
             <div className="flex gap-1">
-              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-gray-200 dark:bg-gray-700"></div>
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-gray-200 dark:bg-gray-200"></div>
               <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-blue-200 dark:bg-blue-900"></div>
               <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-blue-400 dark:bg-blue-700"></div>
               <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-blue-600 dark:bg-blue-500"></div>
