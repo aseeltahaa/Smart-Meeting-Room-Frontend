@@ -139,68 +139,123 @@ function ActionItemsList({ meetingId }) {
   if (loading) return <p className="text-center mt-10 text-gray-500">Loading action items...</p>;
 
   const submittedItems = actionItems.filter(i => i.status === "Submitted");
-  const otherItems = actionItems.filter(i => i.status !== "Submitted");
+  const pendingItems = actionItems.filter(i => i.status === "Pending");
 
-  const ActionItemCard = ({ item, showJudgmentButton = false }) => (
-  <div className="border rounded-lg p-4 mb-4 shadow-sm hover:shadow-md bg-white flex flex-col gap-3 transition">
-    <div className="flex flex-col sm:flex-row sm:justify-between">
-      <div className="flex-1">
-        <p className="font-semibold text-gray-900 break-words">{item.description}</p>
-        <p className="text-gray-700 text-sm">Type: {item.type || "Task"}</p>
-        <p className="text-gray-700 text-sm">
-          Assigned To: {usersMap[item.assignedToUserId] || item.assignedToUserId}
-        </p>
-        {showJudgmentButton ? (
-          <p className="text-gray-700 text-sm">Judgment: {item.judgment}</p>
-        ) : (
-          <p className="text-gray-700 text-sm">Status: {item.status}</p>
-        )}
+  const ActionItemCard = ({ item }) => {
+    const isSubmitted = item.status === "Submitted";
+    const judgment = item.judgment;
 
-        {/* Show uploaded submission files ONLY for submitted items */}
-        {item.status === "Submitted" && item.submissionAttachmentsUrl?.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {item.submissionAttachmentsUrl.map((fileUrl, index) => {
-              const fileName = fileUrl.split("/").pop();
-              return (
-                <a
-                  key={index}
-                  href={`${API_BASE_URL}${fileUrl}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm hover:bg-blue-200 transition"
-                >
-                  {fileName}
-                </a>
-              );
-            })}
+    // Determine which buttons to show
+    const showAcceptButton = isSubmitted && (judgment === "Unjudged" || judgment === "Rejected");
+    const showRejectButton = isSubmitted && (judgment === "Unjudged" || judgment === "Accepted");
+    const showDeleteButton = true; // Always show delete button
+
+    return (
+      <div className="border rounded-lg p-4 mb-4 shadow-sm hover:shadow-md bg-white flex flex-col gap-3 transition">
+        <div className="flex flex-col sm:flex-row sm:justify-between">
+          <div className="flex-1">
+            <p className="font-semibold text-gray-900 break-words">{item.description}</p>
+            <p className="text-gray-700 text-sm">Type: {item.type || "Task"}</p>
+            <p className="text-gray-700 text-sm">
+              Assigned To: {usersMap[item.assignedToUserId] || item.assignedToUserId}
+            </p>
+            <p className="text-gray-700 text-sm">Status: {item.status}</p>
+            
+            {/* Show judgment only for submitted items */}
+            {isSubmitted && (
+              <p className="text-gray-700 text-sm">
+                Judgment: 
+                <span className={`ml-1 font-medium ${
+                  judgment === "Accepted" ? "text-green-600" : 
+                  judgment === "Rejected" ? "text-red-600" : 
+                  "text-yellow-600"
+                }`}>
+                  {judgment}
+                </span>
+              </p>
+            )}
+
+            {/* Show uploaded submission files ONLY for submitted items */}
+            {isSubmitted && item.submissionAttachmentsUrl?.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {item.submissionAttachmentsUrl.map((fileUrl, index) => {
+                  const fileName = fileUrl.split("/").pop();
+                  return (
+                    <a
+                      key={index}
+                      href={`${API_BASE_URL}${fileUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm hover:bg-blue-200 transition"
+                    >
+                      {fileName}
+                    </a>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Buttons Section (Judgment if applicable, Delete always) */}
-      <div className="mt-3 sm:mt-0 sm:ml-4 flex flex-col gap-2">
-        {showJudgmentButton && (
-          <button
-            onClick={() => toggleJudgment(item.id)}
-            className={`px-3 py-1 rounded text-white font-medium text-sm ${
-              item.judgment === "Accepted"
-                ? "bg-red-500 hover:bg-red-600"
-                : "bg-green-500 hover:bg-green-600"
-            }`}
-          >
-            {item.judgment === "Accepted" ? "Reject" : "Accept"}
-          </button>
-        )}
-        <button
-          onClick={() => deleteActionItem(item.id)}
-          className="px-3 py-1 rounded text-white font-medium text-sm bg-gray-500 hover:bg-gray-600"
-        >
-          Delete
-        </button>
+          {/* Buttons Section - Only show buttons for submitted items or delete for all */}
+          <div className="mt-3 sm:mt-0 sm:ml-4 flex flex-col gap-2">
+            {showAcceptButton && (
+              <button
+                onClick={() => acceptActionItem(item.id)}
+                className="px-3 py-1 rounded text-white font-medium text-sm bg-green-500 hover:bg-green-600"
+              >
+                Accept
+              </button>
+            )}
+            
+            {showRejectButton && (
+              <button
+                onClick={() => rejectActionItem(item.id)}
+                className="px-3 py-1 rounded text-white font-medium text-sm bg-red-500 hover:bg-red-600"
+              >
+                Reject
+              </button>
+            )}
+            
+            {showDeleteButton && (
+              <button
+                onClick={() => deleteActionItem(item.id)}
+                className="px-3 py-1 rounded text-white font-medium text-sm bg-gray-500 hover:bg-gray-600"
+              >
+                Delete
+              </button>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-);
+    );
+  };
+  const acceptActionItem = async (itemId) => {
+  setMessage(""); setError("");
+  try {
+    const res = await axios.put(`/Meeting/${meetingId}/action-items/${itemId}/accept`, {
+      judgment: "Accepted"
+    });
+    setActionItems(prev => prev.map(i => i.id === itemId ? res.data : i));
+    setMessage("✅ Action item accepted!");
+  } catch (err) {
+    console.error(err);
+    setError("❌ Failed to accept action item.");
+  }
+};
+
+const rejectActionItem = async (itemId) => {
+  setMessage(""); setError("");
+  try {
+    const res = await axios.put(`/Meeting/${meetingId}/action-items/${itemId}/reject`, {
+      judgment: "Rejected"
+    });
+    setActionItems(prev => prev.map(i => i.id === itemId ? res.data : i));
+    setMessage("❌ Action item rejected!");
+  } catch (err) {
+    console.error(err);
+    setError("❌ Failed to reject action item.");
+  }
+};
 
 
   return (
@@ -256,31 +311,30 @@ function ActionItemsList({ meetingId }) {
         </div>
 
         {/* Attachments input */}
-       <div className="flex flex-col gap-2">
-  <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 border rounded px-4 py-2 text-center text-gray-700 font-medium transition">
-    Choose Files
-    <input
-      type="file"
-      multiple
-      onChange={e => setAttachments(Array.from(e.target.files))}
-      className="hidden"
-    />
-  </label>
+        <div className="flex flex-col gap-2">
+          <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 border rounded px-4 py-2 text-center text-gray-700 font-medium transition">
+            Choose Files
+            <input
+              type="file"
+              multiple
+              onChange={e => setAttachments(Array.from(e.target.files))}
+              className="hidden"
+            />
+          </label>
 
-  {attachments.length > 0 && (
-    <div className="flex flex-wrap gap-2">
-      {attachments.map((file, index) => (
-        <span
-          key={index}
-          className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded"
-        >
-          {file.name}
-        </span>
-      ))}
-    </div>
-  )}
-</div>
-
+          {attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {attachments.map((file, index) => (
+                <span
+                  key={index}
+                  className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded"
+                >
+                  {file.name}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
 
         <button
           onClick={addActionItem}
@@ -294,19 +348,27 @@ function ActionItemsList({ meetingId }) {
       {submittedItems.length > 0 && (
         <div className="mb-6">
           <h3 className="font-semibold text-gray-800 mb-3 text-lg">Submitted Action Items</h3>
-          {submittedItems.map(item => <ActionItemCard key={item.id} item={item} showJudgmentButton />)}
+          {submittedItems.map(item => <ActionItemCard key={item.id} item={item} />)}
         </div>
       )}
 
-      {/* Other Action Items */}
-      {otherItems.length > 0 && (
+      {/* Pending Action Items */}
+      {pendingItems.length > 0 && (
         <div>
-          <h3 className="font-semibold text-gray-800 mb-3 text-lg">Other Action Items</h3>
-          {otherItems.map(item => <ActionItemCard key={item.id} item={item} />)}
+          <h3 className="font-semibold text-gray-800 mb-3 text-lg">Pending Action Items</h3>
+          {pendingItems.map(item => (
+            <ActionItemCard 
+              key={item.id} 
+              item={item} 
+              onAccept={acceptActionItem}
+              onReject={rejectActionItem}
+              onDelete={deleteActionItem}
+            />
+          ))}
         </div>
       )}
 
-      {submittedItems.length === 0 && otherItems.length === 0 && (
+      {submittedItems.length === 0 && pendingItems.length === 0 && (
         <p className="text-center text-gray-500">No action items</p>
       )}
     </div>
