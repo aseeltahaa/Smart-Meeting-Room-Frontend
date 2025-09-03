@@ -7,7 +7,7 @@ function ProfileMain() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  const Base_URL = "https://localhost:7074";
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -35,12 +35,12 @@ function ProfileMain() {
       className="flex flex-col md:flex-row justify-start px-6 py-10 mx-auto w-full max-w-full overflow-x-hidden relative"
       style={{ top: "-25px" }}
     >
-      {/* Profile Picture */}
-      <img
-        src={defaultPfp}
-        alt="Profile"
-        className="w-32 h-32 md:w-52 md:h-48 object-cover rounded-full mb-6 md:mb-0 md:mr-12 mx-auto md:mx-0 md:mx-20"
-      />
+    {/* Profile Picture */}
+    <img
+      src={user.profilePictureUrl ? `${Base_URL}${user.profilePictureUrl}` : defaultPfp}
+      alt="Profile"
+      className="w-32 h-32 md:w-52 md:h-48 object-cover rounded-full mb-6 md:mb-0 md:mr-12 mx-auto md:mx-0 md:mx-20"
+    />
 
       {/* User Info */}
       <div className="w-full rounded-2xl p-8 md:pt-8 md:mx-30 md:my-5">
