@@ -98,7 +98,7 @@ function Header({ showSearchBar = false, showGradient = true, onSearch }) {
             )}
             {isLoggedIn && isAdmin && (
               <Link
-                to="/admin"
+                to="/UserManagement"
                 className={`${showGradient ? "text-white" : "text-black"} py-8 px-4 no-underline`}
               >
                 Admin Panel
@@ -191,7 +191,7 @@ function Header({ showSearchBar = false, showGradient = true, onSearch }) {
               </Link>
             )}
             {isLoggedIn && isAdmin && (
-              <Link to="/AdminPanel" className="text-xl flex items-center gap-2" onClick={() => setMenuOpen(false)}>
+              <Link to="/UserManagement" className="text-xl flex items-center gap-2" onClick={() => setMenuOpen(false)}>
                 <FiUsers size={22} /> Admin Panel
               </Link>
             )}

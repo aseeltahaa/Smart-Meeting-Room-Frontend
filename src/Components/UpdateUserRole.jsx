@@ -7,146 +7,76 @@ function UpdateUserRole() {
   const [role, setRole] = useState("");
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
-  const [emailSearch, setEmailSearch] = useState("");
-
   const availableRoles = ["Admin", "Employee", "Guest"];
 
-  // Fetch all users on mount
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const res = await axios.get("/Users", { headers: { Accept: "application/json" } });
-        setUsers(Array.isArray(res.data) ? res.data : []);
-      } catch (err) {
-        console.error(err);
-        setStatus("⚠️ Failed to load users.");
-      }
-    };
-    fetchUsers();
-  }, []);
-
-  // Search user by email
-  const handleSearchByEmail = async () => {
-    if (!emailSearch.trim()) return;
-    setLoading(true);
-    setStatus("");
-
+  const fetchUsers = async () => {
     try {
-      const res = await axios.get(`/Users/email/${encodeURIComponent(emailSearch.trim())}`);
-      const user = res.data;
-      console.log("Search result:", user);
-      if (user && user.id) {
-        setSelectedUser(user.id);
-        setRole(user.roles?.[0] || "");
-        setStatus("✅ User found and pre-selected.");
-      } else {
-        setStatus("⚠️ User not found.");
-      }
+      const res = await axios.get("/Users");
+      setUsers(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error(err);
-      setStatus("❌ Failed to search user: " + (err.response?.data || err.message));
-    } finally {
-      setLoading(false);
+      setStatus("⚠️ Failed to load users. Please try again later.");
     }
   };
 
-  // Update user role
+  useEffect(() => { fetchUsers(); }, []);
+
   const handleUpdateRole = async () => {
-    if (!selectedUser || !role) {
-      setStatus("⚠️ Please select a user and a role.");
-      return;
+    if (!selectedUser || !role) { 
+      setStatus("⚠️ Please select a user and a role."); 
+      return; 
     }
-
-    setLoading(true);
-    setStatus("");
-
+    setLoading(true); setStatus("");
     try {
       await axios.put(`/Auth/role/${selectedUser}`, { role });
       setStatus("✅ User role updated successfully!");
-      setSelectedUser("");
-      setRole("");
-      setEmailSearch("");
+      setSelectedUser(""); setRole("");
+      fetchUsers(); // refresh dropdown
     } catch (err) {
       console.error(err);
-      setStatus("❌ Failed to update role: " + (err.response?.data || err.message));
-    } finally {
-      setLoading(false);
-    }
+      setStatus("❌ Failed to update role. Please try again later.");
+    } finally { setLoading(false); }
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow w-full mt-6">
-      <h4 className="text-lg font-semibold mb-4">Update User Role</h4>
+    <div className="bg-white p-6 rounded-lg shadow-md h-fit w-full max-w-md mx-auto space-y-4">
+      <h4 className="text-lg font-semibold text-black mb-2">Update User Role</h4>
 
-      {/* Search by email */}
-      <div className="flex gap-2 mb-4">
-        <input
-          type="email"
-          placeholder="Search by email"
-          value={emailSearch}
-          onChange={(e) => setEmailSearch(e.target.value)}
-          className="border rounded p-2 flex-grow"
-        />
-        <button
-          className="btn bg-blue-600 hover:bg-blue-700 text-white px-4"
-          onClick={handleSearchByEmail}
-          disabled={loading || !emailSearch.trim()}
-        >
-          {loading ? "Searching..." : "Search"}
-        </button>
-      </div>
+      {status && (
+        <p className={`p-2 rounded-md text-sm ${
+          status.startsWith("✅")
+            ? "bg-green-50 text-green-600 border border-green-400"
+            : status.startsWith("❌")
+            ? "bg-red-50 text-red-600 border border-red-400"
+            : "bg-yellow-50 text-yellow-600 border border-yellow-400"
+        }`}>{status}</p>
+      )}
 
-      {/* User Dropdown */}
       <select
-        className="border rounded p-2 mb-4 w-full"
+        className="border border-gray-300 rounded-md p-2 w-full focus:ring-2 focus:ring-[#539D98]"
         value={selectedUser}
         onChange={(e) => setSelectedUser(e.target.value)}
       >
         <option value="">Select User</option>
-        {users.map((user) => (
-          <option key={user.id} value={user.id}>
-            {user.email} ({user.roles?.[0] || "No role"})
-          </option>
-        ))}
+        {users.map((user) => <option key={user.id} value={user.id}>{user.email} ({user.roles?.[0] || "No role"})</option>)}
       </select>
 
-      {/* Role Dropdown */}
       <select
-        className="border rounded p-2 mb-4 w-full"
+        className="border border-gray-300 rounded-md p-2 w-full focus:ring-2 focus:ring-[#539D98]"
         value={role}
         onChange={(e) => setRole(e.target.value)}
       >
         <option value="">Select Role</option>
-        {availableRoles.map((r) => (
-          <option key={r} value={r}>
-            {r}
-          </option>
-        ))}
+        {availableRoles.map((r) => <option key={r} value={r}>{r}</option>)}
       </select>
 
-      {/* Update Button */}
       <button
-        className="btn bg-yellow-600 hover:bg-yellow-700 text-white w-full"
+        className="bg-[#539D98] hover:bg-[#42807f] text-white font-semibold py-2 px-4 rounded-md whitespace-nowrap w-full"
         onClick={handleUpdateRole}
         disabled={!selectedUser || !role || loading}
       >
         {loading ? "Updating..." : "Update Role"}
       </button>
-
-      {/* Status Message */}
-      {status && (
-        <p
-          className={`mt-2 text-sm ${
-            status.startsWith("✅")
-              ? "text-green-600"
-              : status.startsWith("❌")
-              ? "text-red-600"
-              : "text-yellow-600"
-          }`}
-        >
-          {status}
-        </p>
-      )}
     </div>
   );
 }

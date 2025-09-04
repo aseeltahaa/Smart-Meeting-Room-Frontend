@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "../api/axiosInstance";
 
-function DeleteFeatureFromRoom() {
+function DeleteFeatureFromRoom({ refreshTrigger, onFeatureChange }) {
   const [rooms, setRooms] = useState([]);
   const [features, setFeatures] = useState([]);
   const [roomFeatures, setRoomFeatures] = useState([]);
@@ -19,34 +19,36 @@ function DeleteFeatureFromRoom() {
     }
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const roomsRes = await axios.get("/Room", { headers: { Accept: "application/json" } });
-        const featuresRes = await axios.get("/Features", { headers: { Accept: "application/json" } });
+  // Fetch rooms and features
+  const fetchData = async () => {
+    try {
+      const roomsRes = await axios.get("/Room");
+      const featuresRes = await axios.get("/Features");
 
-        setRooms(Array.isArray(safeParse(roomsRes.data)) ? safeParse(roomsRes.data) : []);
-        setFeatures(Array.isArray(safeParse(featuresRes.data)) ? safeParse(featuresRes.data) : []);
-      } catch (err) {
-        console.error(err);
-        setStatus("⚠️ Failed to load rooms or features.");
-      }
-    };
-    fetchData();
-  }, []);
+      setRooms(Array.isArray(safeParse(roomsRes.data)) ? safeParse(roomsRes.data) : []);
+      setFeatures(Array.isArray(safeParse(featuresRes.data)) ? safeParse(featuresRes.data) : []);
+    } catch {
+      setStatus("⚠️ Failed to load rooms or features.");
+    }
+  };
 
+  useEffect(() => { fetchData(); }, [refreshTrigger]);
+
+  // Update roomFeatures when room or features change
   useEffect(() => {
     if (!selectedRoom) {
       setRoomFeatures([]);
       setSelectedFeature("");
       return;
     }
+
     const room = rooms.find((r) => r.id === selectedRoom);
     if (!room || !room.featureIds) {
       setRoomFeatures([]);
       setSelectedFeature("");
       return;
     }
+
     const assignedFeatures = features.filter((f) => room.featureIds.includes(f.id));
     setRoomFeatures(assignedFeatures);
     setSelectedFeature("");
@@ -63,6 +65,7 @@ function DeleteFeatureFromRoom() {
       setStatus("✅ Feature removed from room successfully!");
       setConfirm(false);
 
+      // Update local state for immediate UI feedback
       setRoomFeatures(roomFeatures.filter((f) => f.id !== selectedFeature));
       setRooms((prevRooms) =>
         prevRooms.map((r) =>
@@ -73,16 +76,16 @@ function DeleteFeatureFromRoom() {
       );
 
       setSelectedFeature("");
+      onFeatureChange?.(); // Trigger refresh in parent / sibling components
     } catch (err) {
-      console.error(err);
-      setStatus("❌ Failed to remove feature: " + (err.response?.data || err.message));
+      setStatus("❌ Failed to remove feature: " + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow w-full">
+    <div className="bg-white p-6 rounded-lg shadow w-full max-w-md">
       <h4 className="text-lg font-semibold mb-4">Delete Feature from Room</h4>
 
       {/* Room Dropdown */}
@@ -116,9 +119,9 @@ function DeleteFeatureFromRoom() {
         ))}
       </select>
 
-      {/* Always show Delete Selected button */}
+      {/* Delete Button */}
       <button
-        className="btn bg-red-600 hover:bg-red-700"
+        className="bg-red-600 hover:bg-red-700 text-white py-2 rounded w-full"
         onClick={() => setConfirm(true)}
         disabled={!selectedRoom || !selectedFeature || loading}
       >
@@ -135,14 +138,14 @@ function DeleteFeatureFromRoom() {
           </p>
           <div className="flex gap-2">
             <button
-              className="btn bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 text-white py-2 flex-1 rounded"
               onClick={handleDelete}
               disabled={loading}
             >
               {loading ? "Deleting..." : "Yes, Delete"}
             </button>
             <button
-              className="btn bg-gray-300 hover:bg-gray-400 text-black"
+              className="bg-gray-300 hover:bg-gray-400 text-black py-2 flex-1 rounded"
               onClick={() => setConfirm(false)}
               disabled={loading}
             >

@@ -1,116 +1,75 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "../api/axiosInstance";
 
 function DeleteUser() {
-  const [email, setEmail] = useState("");
-  const [confirm, setConfirm] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState("");
   const [status, setStatus] = useState("");
-  const [userId, setUserId] = useState(null); // store ID after lookup
+  const [loading, setLoading] = useState(false);
+  const [confirm, setConfirm] = useState(false);
 
-  // Lookup user by email
-  const handleLookup = async () => {
-    if (!email.trim()) return;
-    setLoading(true);
-    setStatus("");
-
+  const fetchUsers = async () => {
     try {
-      const res = await axios.get(`/Users/email/${encodeURIComponent(email.trim())}`);
-      if (res.data && res.data.id) {
-        setUserId(res.data.id);
-        setStatus("✅ User found. Ready to delete.");
-        setConfirm(true);
-      } else {
-        setStatus("⚠️ User not found.");
-        setUserId(null);
-      }
+      const res = await axios.get("/Users");
+      setUsers(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error(err);
-      setStatus("❌ Failed to lookup user: " + (err.response?.data || err.message));
-      setUserId(null);
-    } finally {
-      setLoading(false);
+      setStatus("⚠️ Failed to load users. Please try again later.");
     }
   };
 
-  // Delete user by ID
-  const handleDelete = async () => {
-    if (!userId) return;
-    setLoading(true);
-    setStatus("");
+  useEffect(() => { fetchUsers(); }, []);
 
+  const handleDelete = async () => {
+    if (!selectedUser) return;
+    setLoading(true); setStatus("");
     try {
-      await axios.delete(`/Auth/${userId}`);
+      await axios.delete(`/Auth/${selectedUser}`);
       setStatus("✅ User deleted successfully!");
-      setEmail("");
-      setUserId(null);
-      setConfirm(false);
+      setSelectedUser(""); setConfirm(false);
+      fetchUsers();
     } catch (err) {
       console.error(err);
-      setStatus("❌ Failed to delete user: " + (err.response?.data || err.message));
-    } finally {
-      setLoading(false);
-    }
+      setStatus("❌ Failed to delete user. Please try again later.");
+    } finally { setLoading(false); }
   };
 
   return (
-    <div className="bg-white p-4 rounded shadow flex flex-col">
-      <h4 className="text-lg font-semibold mb-3">Delete User by Email</h4>
+    <div className="bg-white p-6 rounded-lg shadow-md h-fit w-full max-w-md mx-auto space-y-4">
+      <h4 className="text-lg font-semibold text-black mb-2">Delete User</h4>
 
-      {/* Input for Email */}
-      <div className="flex gap-2 mb-3">
-        <input
-          type="email"
-          placeholder="Enter user email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="border rounded p-2 flex-grow"
-        />
-        <button
-          className="btn bg-blue-600 hover:bg-blue-700 text-white px-4"
-          onClick={handleLookup}
-          disabled={!email.trim() || loading}
-        >
-          {loading ? "Searching..." : "Search"}
-        </button>
-      </div>
-
-      {/* Confirmation */}
-      {confirm && (
-        <div className="flex flex-col gap-2">
-          <p>Are you sure you want to delete the user with email: <strong>{email}</strong>?</p>
-          <div className="flex gap-2">
-            <button
-              className="btn bg-red-600 hover:bg-red-700 text-white"
-              onClick={handleDelete}
-              disabled={loading}
-            >
-              Yes, Delete
-            </button>
-            <button
-              className="btn bg-gray-300 hover:bg-gray-400 text-black"
-              onClick={() => setConfirm(false)}
-              disabled={loading}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+      {status && (
+        <p className={`p-2 rounded-md text-sm ${
+          status.startsWith("✅")
+            ? "bg-green-50 text-green-600 border border-green-400"
+            : status.startsWith("❌")
+            ? "bg-red-50 text-red-600 border border-red-400"
+            : "bg-yellow-50 text-yellow-600 border border-yellow-400"
+        }`}>{status}</p>
       )}
 
-      {/* Status Message */}
-      {status && (
-        <p
-          className={`mt-2 text-sm ${
-            status.startsWith("✅")
-              ? "text-green-600"
-              : status.startsWith("❌")
-              ? "text-red-600"
-              : "text-yellow-600"
-          }`}
-        >
-          {status}
-        </p>
+      <select
+        className="border border-gray-300 rounded-md p-2 w-full focus:ring-2 focus:ring-[#539D98]"
+        value={selectedUser}
+        onChange={(e) => { setSelectedUser(e.target.value); setConfirm(true); }}
+      >
+        <option value="">Select User</option>
+        {users.map((user) => <option key={user.id} value={user.id}>{user.email}</option>)}
+      </select>
+
+      {confirm && selectedUser && (
+        <div className="space-y-2">
+          <p className="text-gray-700">
+            Are you sure you want to delete <strong>{users.find(u => u.id === selectedUser)?.email}</strong>?
+          </p>
+          <button
+            className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md w-full whitespace-nowrap"
+            onClick={handleDelete}
+            disabled={loading}
+          >
+            {loading ? "Deleting..." : "Yes, Delete"}
+          </button>
+        </div>
       )}
     </div>
   );
