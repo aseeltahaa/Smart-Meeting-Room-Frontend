@@ -1,80 +1,70 @@
 import { useState } from "react";
 import axios from "../api/axiosInstance";
 
-function FeatureForm() {
+function AddFeature({ onFeatureChange }) {
   const [name, setName] = useState("");
-  const [errors, setErrors] = useState([]);
-  const [success, setSuccess] = useState("");
+  const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setErrors([]);
-    setSuccess("");
+    setStatus("");
     setLoading(true);
 
     try {
       await axios.post("/Features", { name });
-      setSuccess("✅ Feature registered successfully!");
+      setStatus("✅ Feature registered successfully!");
       setName("");
+      onFeatureChange(); // refresh list in FeatureManagement
     } catch (err) {
-      if (err.response) {
-        const data = err.response.data;
-        if (Array.isArray(data)) {
-          setErrors(data.map((e) => e.description));
-        } else if (data.message) {
-          setErrors([data.message]);
-        } else {
-          setErrors(["Failed to register feature."]);
-        }
-      } else if (err.request) {
-        setErrors(["❌ Server did not respond. Please try again later."]);
-      } else {
-        setErrors([`❌ ${err.message}`]);
-      }
+      console.error(err);
+      setStatus(
+        "❌ " +
+          (err.response?.data?.message || "Failed to register feature. Please try again later.")
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-      {errors.length > 0 && (
-        <div className="bg-red-50 border border-red-400 text-red-700 p-3 rounded">
-          <ul className="list-disc list-inside space-y-1">
-            {errors.map((err, i) => (
-              <li key={i}>{err}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+    <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md mx-auto space-y-4">
+      <h4 className="text-lg font-semibold">Add New Feature</h4>
 
-      {success && (
-        <p className="text-green-600 font-semibold border border-green-400 bg-green-50 p-2 rounded">
-          {success}
+      {status && (
+        <p
+          className={`p-2 rounded-md text-sm ${
+            status.startsWith("✅")
+              ? "bg-green-50 text-green-600 border border-green-400"
+              : "bg-red-50 text-red-600 border border-red-400"
+          }`}
+        >
+          {status}
         </p>
       )}
 
-      <div className="flex items-center border rounded-md px-3 py-2 focus-within:ring-2 ring-blue-500">
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Feature Name"
-          className="w-full outline-none"
-          required
-        />
-      </div>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="flex items-center border border-gray-300 rounded-md px-3 py-2 focus-within:ring-2 ring-[#539D98]">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Feature Name"
+            className="w-full outline-none text-black"
+            required
+          />
+        </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md mt-4"
-      >
-        {loading ? "Registering..." : "Register Feature"}
-      </button>
-    </form>
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-[#539D98] hover:bg-[#42807f] text-white font-semibold py-2 rounded-md"
+        >
+          {loading ? "Registering..." : "Register Feature"}
+        </button>
+      </form>
+    </div>
   );
 }
 
-export default FeatureForm;
+export default AddFeature;

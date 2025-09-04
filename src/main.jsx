@@ -6,12 +6,7 @@ import NotFound from './Pages/NotFound.jsx';
 import LoginPage from './Pages/LoginPage.jsx';
 import AboutUs from './Pages/AboutUs.jsx';
 import RoomDisplay from './Pages/RoomDisplay.jsx';
-import AdminPanel from './Pages/AdminPanel.jsx';
-import RegisterUser from './Pages/RegisterPage.jsx';
-import FeaturePage from './Pages/FeaturePage.jsx';
-import RoomRegister from './Pages/RoomRegister.jsx';
 import RoomInfo from './Pages/RoomInfo.jsx';
-import UpdateRoomPage from './Pages/UpdateRoomPage.jsx';
 import Profile from './Pages/Profile.jsx';
 import ResetPassword from './Pages/ResetPassword.jsx';
 import Notifications from './Pages/Notifications.jsx';
@@ -22,19 +17,15 @@ import MeetingNotesPage from './Pages/MeetingNotesPage.jsx';
 import MeetingDetailsView from './Pages/MeetingDetailsView.jsx'
 import NotesView from './Pages/NotesView.jsx';
 import TasksView from './Pages/TasksView.jsx';
+import ManageUsers from './Pages/ManageUsers.jsx';
+import ManageRooms from './Pages/ManageRooms.jsx';
+import ManageFeatures from './Pages/ManageFeatures.jsx';
 
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 
 const router = createBrowserRouter([
   // General / Main App
   { path: "/", element: <App /> },
-
-  // Admin Routes
-  { path: "/admin", element: <AdminPanel /> },
-  { path: "/admin/register", element: <RegisterUser /> },
-  { path: "/admin/features", element: <FeaturePage /> },
-  { path: "/admin/rooms", element: <RoomRegister /> },
-  { path: "/admin/update-room", element: <UpdateRoomPage /> },
 
   // Auth & Info Pages
   { path: "/login", element: <LoginPage /> },
@@ -43,6 +34,11 @@ const router = createBrowserRouter([
   { path: "/room/:roomId", element: <RoomInfo /> },
   { path: "/profile", element: <Profile /> },
   { path: "/reset-password", element: <ResetPassword /> },
+
+  // Admin Routes
+  {path : "/RoomManagement", element: <ManageRooms />},
+  {path : "/FeatureManagement", element: <ManageFeatures />},
+  {path : "/UserManagement", element: <ManageUsers />},
 
   // Meetings Pages
   { path: "/meetings/:id/details", element: <MeetingDetailsPage /> },

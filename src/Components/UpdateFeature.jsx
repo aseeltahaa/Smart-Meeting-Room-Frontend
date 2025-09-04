@@ -1,31 +1,22 @@
 import React, { useState, useEffect } from "react";
 import axios from "../api/axiosInstance";
 
-function UpdateFeature() {
-  const [features, setFeatures] = useState([]);
+function UpdateFeature({ features, onFeatureChange }) {
   const [selectedFeature, setSelectedFeature] = useState(null);
   const [name, setName] = useState("");
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Fetch all features
   useEffect(() => {
-    const fetchFeatures = async () => {
-      try {
-        const res = await axios.get("/Features", { headers: { Accept: "application/json" } });
-        setFeatures(Array.isArray(res.data) ? res.data : []);
-      } catch (err) {
-        console.error(err);
-        setStatus("⚠️ Failed to load features.");
-      }
-    };
-    fetchFeatures();
-  }, []);
+    if (selectedFeature) {
+      const feature = features.find((f) => f.id === selectedFeature.id);
+      setName(feature?.name || "");
+    }
+  }, [selectedFeature, features]);
 
   const handleSelectFeature = (id) => {
     const feature = features.find((f) => f.id === id);
     setSelectedFeature(feature);
-    setName(feature?.name || "");
     setStatus("");
   };
 
@@ -41,28 +32,43 @@ function UpdateFeature() {
       setStatus("✅ Feature updated successfully!");
       setSelectedFeature(null);
       setName("");
+      onFeatureChange(); // refresh feature list in parent
     } catch (err) {
       console.error(err);
-      setStatus("❌ Failed to update feature: " + (err.response?.data || err.message));
+      setStatus(
+        "❌ " +
+          (err.response?.data?.message || "Failed to update feature. Please try again later.")
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow w-full mt-6">
-      <h4 className="text-lg font-semibold mb-4">Update Feature</h4>
+    <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md mx-auto space-y-4">
+      <h4 className="text-lg font-semibold">Update Feature</h4>
 
-      {/* Feature Dropdown */}
+      {status && (
+        <p
+          className={`p-2 rounded-md text-sm ${
+            status.startsWith("✅")
+              ? "bg-green-50 text-green-600 border border-green-400"
+              : "bg-red-50 text-red-600 border border-red-400"
+          }`}
+        >
+          {status}
+        </p>
+      )}
+
       <select
-        className="border rounded p-2 mb-4 w-full"
         value={selectedFeature?.id || ""}
         onChange={(e) => handleSelectFeature(e.target.value)}
+        className="border border-gray-300 rounded-md p-2 w-full focus:ring-2 focus:ring-[#539D98]"
       >
         <option value="">Select Feature</option>
-        {features.map((feature) => (
-          <option key={feature.id} value={feature.id}>
-            {feature.name}
+        {features.map((f) => (
+          <option key={f.id} value={f.id}>
+            {f.name}
           </option>
         ))}
       </select>
@@ -75,29 +81,16 @@ function UpdateFeature() {
             onChange={(e) => setName(e.target.value)}
             className="border rounded p-2"
             placeholder="Feature Name"
+            required
           />
           <button
             type="submit"
-            className="btn bg-yellow-600 hover:bg-yellow-700 text-white"
+            className="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 rounded-md w-full"
             disabled={loading || !name.trim()}
           >
             {loading ? "Updating..." : "Update Feature"}
           </button>
         </form>
-      )}
-
-      {status && (
-        <p
-          className={`mt-2 text-sm ${
-            status.startsWith("✅")
-              ? "text-green-600"
-              : status.startsWith("❌")
-              ? "text-red-600"
-              : "text-yellow-600"
-          }`}
-        >
-          {status}
-        </p>
       )}
     </div>
   );
