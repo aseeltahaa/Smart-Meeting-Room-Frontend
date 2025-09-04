@@ -3,6 +3,7 @@ import EditMeetingForm from '../Components/EditMeetingForm.jsx';
 import Footer from '../Components/Footer.jsx';
 import MeetingHeader from '../Components/MeetingHeader.jsx';
 import MeetingFileUpload from "../Components/MeetingFileUpload.jsx";
+import DeleteMeeting from "../Components/DeleteMeeting.jsx"; 
 
 function MeetingDetailsPage() {
   const { id } = useParams();
@@ -34,6 +35,12 @@ function MeetingDetailsPage() {
         <section className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-4 text-gray-800">Upload Attachments</h2>
           <MeetingFileUpload meetingId={id} />
+        </section>
+
+        {/* Delete Meeting Section */}
+        <section className="bg-white p-6 rounded-lg shadow-md text-center">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800">Danger Zone</h2>
+          <DeleteMeeting meetingId={id} />
         </section>
       </main>
 
