@@ -5,36 +5,56 @@ function DeleteRoom({ refreshTrigger, onRoomChange }) {
   const [rooms, setRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState("");
   const [confirm, setConfirm] = useState(false);
-  const [message, setMessage] = useState({ type: "", text: "" });
+  const [errors, setErrors] = useState([]);
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   const fetchRooms = async () => {
     try {
       const res = await axios.get("/Room");
-      setRooms(res.data || []);
-    } catch {
-      setMessage({ type: "error", text: "⚠️ Failed to fetch rooms." });
+      setRooms(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      if (err.response) {
+        const data = err.response.data;
+        if (Array.isArray(data)) setErrors(data.map((e) => e.description || e));
+        else if (data.message) setErrors([data.message]);
+        else setErrors(["Failed to fetch rooms."]);
+      } else if (err.request) {
+        setErrors(["❌ Server did not respond. Please try again later."]);
+      } else {
+        setErrors([`❌ ${err.message}`]);
+      }
     }
   };
 
   useEffect(() => {
     fetchRooms();
-  }, [refreshTrigger]); // <-- will re-fetch whenever parent increments trigger
+  }, [refreshTrigger]);
 
   const handleDelete = async () => {
     if (!selectedRoom) return;
 
     setLoading(true);
-    setMessage({ type: "", text: "" });
+    setErrors([]);
+    setSuccess("");
 
     try {
       await axios.delete(`/Room/${selectedRoom}`);
-      setMessage({ type: "success", text: "✅ Room deleted successfully!" });
+      setSuccess("✅ Room deleted successfully!");
       setSelectedRoom("");
       setConfirm(false);
-      onRoomChange?.(); // notify parent to refresh other components
-    } catch {
-      setMessage({ type: "error", text: "❌ Failed to delete room." });
+      onRoomChange?.();
+    } catch (err) {
+      if (err.response) {
+        const data = err.response.data;
+        if (Array.isArray(data)) setErrors(data.map((e) => e.description || e));
+        else if (data.message) setErrors([data.message]);
+        else setErrors(["Failed to delete room."]);
+      } else if (err.request) {
+        setErrors(["❌ Server did not respond. Please try again later."]);
+      } else {
+        setErrors([`❌ ${err.message}`]);
+      }
     } finally {
       setLoading(false);
     }
@@ -44,16 +64,20 @@ function DeleteRoom({ refreshTrigger, onRoomChange }) {
     <div className="w-full max-w-md bg-white p-6 rounded-lg shadow-md mb-6">
       <h3 className="text-xl font-bold mb-4">Delete Room</h3>
 
-      {message.text && (
-        <div
-          className={`p-2 mb-3 rounded ${
-            message.type === "success"
-              ? "bg-green-50 border border-green-400 text-green-700"
-              : "bg-red-50 border border-red-400 text-red-700"
-          }`}
-        >
-          {message.text}
+      {errors.length > 0 && (
+        <div className="bg-red-50 border border-red-400 text-red-700 p-3 rounded mb-3">
+          <ul className="list-disc list-inside space-y-1">
+            {errors.map((err, i) => (
+              <li key={i}>{err}</li>
+            ))}
+          </ul>
         </div>
+      )}
+
+      {success && (
+        <p className="text-green-600 font-semibold border border-green-400 bg-green-50 p-2 rounded mb-3">
+          {success}
+        </p>
       )}
 
       <select

@@ -9,52 +9,115 @@ function AddFeatureToRoom({ refreshTrigger, onFeatureChange }) {
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const safeParse = data => { try { return typeof data==="string"?JSON.parse(data):data; } catch { return []; } };
-
-  const fetchData = async () => {
+  const safeParse = (data) => {
     try {
-      const roomsRes = await axios.get("/Room"); 
-      const featuresRes = await axios.get("/Features"); 
-      setRooms(Array.isArray(safeParse(roomsRes.data))?safeParse(roomsRes.data):[]);
-      setFeatures(Array.isArray(safeParse(featuresRes.data))?safeParse(featuresRes.data):[]);
-    } catch { setStatus("⚠️ Failed to load rooms or features."); }
+      if (typeof data === "string") return JSON.parse(data);
+      return data;
+    } catch (err) {
+      console.error("❌ Failed to parse response:", err);
+      return [];
+    }
   };
 
-  useEffect(()=>{ fetchData(); }, [refreshTrigger]);
+  // ✅ Improved fetchData with JSON headers and error logging
+  const fetchData = async () => {
+    try {
+      const roomsRes = await axios.get("/Room", { headers: { Accept: "application/json" } });
+      const featuresRes = await axios.get("/Features", { headers: { Accept: "application/json" } });
 
-  const handleAddFeature = async e => {
+      setRooms(Array.isArray(safeParse(roomsRes.data)) ? safeParse(roomsRes.data) : []);
+      setFeatures(Array.isArray(safeParse(featuresRes.data)) ? safeParse(featuresRes.data) : []);
+    } catch (err) {
+      console.error(err);
+      setStatus("⚠️ Failed to load rooms or features.");
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [refreshTrigger]);
+
+  const handleAddFeature = async (e) => {
     e.preventDefault();
-    if (!selectedRoom || !selectedFeature) { setStatus("⚠️ Please select both a room and a feature."); return; }
-    setLoading(true); setStatus("");
+
+    if (!selectedRoom || !selectedFeature) {
+      setStatus("⚠️ Please select both a room and a feature.");
+      return;
+    }
+
+    setLoading(true);
+    setStatus("");
 
     try {
       await axios.post(`/Room/${selectedRoom}/features/${selectedFeature}`);
       setStatus("✅ Feature added to room successfully!");
-      setSelectedRoom(""); setSelectedFeature("");
+      setSelectedRoom("");
+      setSelectedFeature("");
       onFeatureChange?.();
-    } catch { setStatus("❌ Failed to add feature to room."); }
-    finally { setLoading(false); }
+    } catch (err) {
+      console.error(err);
+      setStatus("❌ Failed to add feature to room.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="bg-white shadow-md rounded p-6 w-full max-w-md">
+    <div className="bg-white shadow-md rounded p-6 w-full max-w-md mt-6">
       <h2 className="text-xl font-semibold mb-4">Add Feature to Room</h2>
-      {status && <p className={`mt-2 text-sm ${status.startsWith("✅")?"text-green-600":status.startsWith("❌")?"text-red-600":"text-yellow-600"}`}>{status}</p>}
       <form onSubmit={handleAddFeature} className="flex flex-col gap-4">
-        <select value={selectedRoom} onChange={e=>setSelectedRoom(e.target.value)} className="border rounded px-3 py-2 focus:outline-none focus:ring">
+        {/* Room Dropdown */}
+        <select
+          value={selectedRoom}
+          onChange={(e) => setSelectedRoom(e.target.value)}
+          className="border rounded px-3 py-2 focus:outline-none focus:ring"
+        >
           <option value="">Select Room</option>
-          {rooms.map(r=> <option key={r.id} value={r.id}>{r.name} ({r.capacity} seats - {r.location})</option>)}
+          {rooms.map((room) => (
+            <option key={room.id} value={room.id}>
+              {room.name} ({room.capacity} seats - {room.location})
+            </option>
+          ))}
         </select>
 
-        <select value={selectedFeature} onChange={e=>setSelectedFeature(e.target.value)} className="border rounded px-3 py-2 focus:outline-none focus:ring">
+        {/* Feature Dropdown */}
+        <select
+          value={selectedFeature}
+          onChange={(e) => setSelectedFeature(e.target.value)}
+          className="border rounded px-3 py-2 focus:outline-none focus:ring"
+        >
           <option value="">Select Feature</option>
-          {features.map(f=> <option key={f.id} value={f.id}>{f.name}</option>)}
+          {features.map((feature) => (
+            <option key={feature.id} value={feature.id}>
+              {feature.name}
+            </option>
+          ))}
         </select>
 
-        <button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md">
+        {/* Submit Button */}
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:opacity-50"
+        >
           {loading ? "Adding..." : "Add Feature"}
         </button>
       </form>
+
+      {/* Status Message */}
+      {status && (
+        <p
+          className={`mt-2 text-sm ${
+            status.startsWith("✅")
+              ? "text-green-600"
+              : status.startsWith("❌")
+              ? "text-red-600"
+              : "text-yellow-600"
+          }`}
+        >
+          {status}
+        </p>
+      )}
     </div>
   );
 }

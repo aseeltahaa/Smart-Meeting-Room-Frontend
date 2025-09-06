@@ -20,19 +20,33 @@ function DeleteFeatureFromRoom({ refreshTrigger, onFeatureChange }) {
   };
 
   // Fetch rooms and features
+  // Fetch rooms and features
   const fetchData = async () => {
     try {
-      const roomsRes = await axios.get("/Room");
-      const featuresRes = await axios.get("/Features");
+      const roomsRes = await axios.get("/Room", {
+        headers: { Accept: "application/json" },
+      });
+      const featuresRes = await axios.get("/Features", {
+        headers: { Accept: "application/json" },
+      });
 
-      setRooms(Array.isArray(safeParse(roomsRes.data)) ? safeParse(roomsRes.data) : []);
-      setFeatures(Array.isArray(safeParse(featuresRes.data)) ? safeParse(featuresRes.data) : []);
-    } catch {
+      setRooms(
+        Array.isArray(safeParse(roomsRes.data)) ? safeParse(roomsRes.data) : []
+      );
+      setFeatures(
+        Array.isArray(safeParse(featuresRes.data))
+          ? safeParse(featuresRes.data)
+          : []
+      );
+    } catch (err) {
+      console.error(err);
       setStatus("⚠️ Failed to load rooms or features.");
     }
   };
 
-  useEffect(() => { fetchData(); }, [refreshTrigger]);
+  useEffect(() => {
+    fetchData();
+  }, [refreshTrigger]);
 
   // Update roomFeatures when room or features change
   useEffect(() => {
@@ -49,7 +63,9 @@ function DeleteFeatureFromRoom({ refreshTrigger, onFeatureChange }) {
       return;
     }
 
-    const assignedFeatures = features.filter((f) => room.featureIds.includes(f.id));
+    const assignedFeatures = features.filter((f) =>
+      room.featureIds.includes(f.id)
+    );
     setRoomFeatures(assignedFeatures);
     setSelectedFeature("");
   }, [selectedRoom, rooms, features]);
@@ -70,7 +86,10 @@ function DeleteFeatureFromRoom({ refreshTrigger, onFeatureChange }) {
       setRooms((prevRooms) =>
         prevRooms.map((r) =>
           r.id === selectedRoom
-            ? { ...r, featureIds: r.featureIds.filter((id) => id !== selectedFeature) }
+            ? {
+                ...r,
+                featureIds: r.featureIds.filter((id) => id !== selectedFeature),
+              }
             : r
         )
       );
@@ -78,7 +97,10 @@ function DeleteFeatureFromRoom({ refreshTrigger, onFeatureChange }) {
       setSelectedFeature("");
       onFeatureChange?.(); // Trigger refresh in parent / sibling components
     } catch (err) {
-      setStatus("❌ Failed to remove feature: " + (err.response?.data?.message || err.message));
+      setStatus(
+        "❌ Failed to remove feature: " +
+          (err.response?.data?.message || err.message)
+      );
     } finally {
       setLoading(false);
     }
@@ -110,7 +132,9 @@ function DeleteFeatureFromRoom({ refreshTrigger, onFeatureChange }) {
         disabled={!selectedRoom || roomFeatures.length === 0}
       >
         <option value="">
-          {roomFeatures.length === 0 ? "No features in this room" : "Select Feature"}
+          {roomFeatures.length === 0
+            ? "No features in this room"
+            : "Select Feature"}
         </option>
         {roomFeatures.map((feature) => (
           <option key={feature.id} value={feature.id}>
@@ -133,7 +157,10 @@ function DeleteFeatureFromRoom({ refreshTrigger, onFeatureChange }) {
         <div className="flex flex-col gap-2 mt-4">
           <p>
             Are you sure you want to delete feature{" "}
-            <strong>{roomFeatures.find((f) => f.id === selectedFeature)?.name}</strong> from room{" "}
+            <strong>
+              {roomFeatures.find((f) => f.id === selectedFeature)?.name}
+            </strong>{" "}
+            from room{" "}
             <strong>{rooms.find((r) => r.id === selectedRoom)?.name}</strong>?
           </p>
           <div className="flex gap-2">
