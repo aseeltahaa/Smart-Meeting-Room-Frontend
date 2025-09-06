@@ -67,37 +67,34 @@ export default function MeetingDetailsView() {
   }, []);
 
   // Download a single attachment (blob first, then fallback)
-  const handleDownload = useCallback(async (attachmentUrl, e) => {
-    e?.stopPropagation();
-    if (!attachmentUrl) return;
+  // Replace your previous handleDownload with this one
+const handleDownload = useCallback(async (attachmentUrl, e) => {
+  e?.stopPropagation();
+  if (!attachmentUrl || !meeting) return;
 
-    const fullUrl = `${BASE_URL}${attachmentUrl}`;
-    const fileName = attachmentUrl.split("/").pop() || "download";
-    try {
-      const response = await fetch(fullUrl);
-      if (!response.ok) throw new Error("Network response was not ok");
-      const blob = await response.blob();
-      const objectUrl = window.URL.createObjectURL(blob);
+  const fileName = attachmentUrl.split("/").pop() || "download";
 
-      const a = document.createElement("a");
-      a.href = objectUrl;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(objectUrl);
-    } catch (err) {
-      console.error("Download failed:", err);
-      const a = document.createElement("a");
-      a.href = fullUrl;
-      a.download = fileName;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-  }, []);
+  try {
+    const response = await axios.get(`/files/meetings/${meeting.id}/${fileName}`, {
+      responseType: "blob",
+    });
+
+    const blob = new Blob([response.data]);
+    const blobUrl = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (err) {
+    console.error("Download failed:", err);
+    alert("You are not authorized to view this file or it failed to load.");
+  }
+}, [meeting]);
+
 
   // Create a human-readable summary that includes EVERYTHING from GetMeetingById
   const summary = useMemo(() => {
@@ -110,7 +107,6 @@ export default function MeetingDetailsView() {
     lines.push(`Room ID: ${meeting.roomId ?? "N/A"}`);
     lines.push(`Organizer (User ID): ${meeting.userId ?? "N/A"}`);
     lines.push(`Recurring Booking ID: ${meeting.recurringBookingId ?? "None"}`);
-    lines.push(`Next Meeting ID: ${meeting.nextMeetingId ?? "None"}`);
     lines.push(`Start: ${formatDateTime(meeting.startTime)}`);
     lines.push(`End: ${formatDateTime(meeting.endTime)}`);
     lines.push(`Created: ${formatDateTime(meeting.createdAt)}`);
@@ -231,7 +227,6 @@ export default function MeetingDetailsView() {
           <div>
             <p><span className="font-semibold">Organizer (User ID):</span> {meeting.userId || "N/A"}</p>
             <p><span className="font-semibold">Recurring Booking ID:</span> {meeting.recurringBookingId ?? "None"}</p>
-            <p><span className="font-semibold">Next Meeting ID:</span> {meeting.nextMeetingId ?? "None"}</p>
           </div>
         </div>
 
@@ -383,7 +378,6 @@ function createPDF(meeting, summary) {
   add(`Room ID: ${meeting.roomId || "N/A"}`);
   add(`Organizer (User ID): ${meeting.userId || "N/A"}`);
   add(`Recurring Booking ID: ${meeting.recurringBookingId ?? "None"}`);
-  add(`Next Meeting ID: ${meeting.nextMeetingId ?? "None"}`);
 
   space(8);
   add("AGENDA", 14, true);

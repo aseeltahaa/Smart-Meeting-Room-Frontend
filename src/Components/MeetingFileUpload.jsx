@@ -24,10 +24,10 @@ export default function MeetingFileUpload({ meetingId }) {
 
         if (data.attachmentUrls && Array.isArray(data.attachmentUrls)) {
           setExistingAttachments(
-            data.attachmentUrls.map(url => ({
-              name: url.split("/").pop(),
-              url: baseUrl + url
-            }))
+            data.attachmentUrls.map(url => {
+              const fileName = url.split("/").pop();
+              return { name: fileName };
+            })
           );
         }
       } catch (error) {
@@ -57,16 +57,25 @@ export default function MeetingFileUpload({ meetingId }) {
     return iconMap[ext] || "📎";
   };
 
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-  };
+  const handleAttachmentClick = async (attachment) => {
+    try {
+      const response = await api.get(`/files/meetings/${meetingId}/${attachment.name}`, {
+        responseType: "blob", // get the file as blob
+      });
 
-  const handleAttachmentClick = (attachment) => {
-    if (attachment.url) window.open(attachment.url, "_blank");
+      // Create a temporary URL for the blob
+      const fileURL = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = fileURL;
+      link.setAttribute("download", attachment.name);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(fileURL);
+    } catch (err) {
+      console.error("Failed to download file:", err);
+      alert("You are not authorized to view this file or it failed to load.");
+    }
   };
 
   const validateFiles = (filesArray) => {
@@ -119,19 +128,15 @@ export default function MeetingFileUpload({ meetingId }) {
       setSelectedFiles([]);
 
       // Refresh attachments
-      const { data } = await api.get(`/Meeting/${meetingId}`);
-      setMeetingData(data);
+      const { data: refreshedData } = await api.get(`/Meeting/${meetingId}`);
+      setExistingAttachments(
+        refreshedData.attachmentUrls.map(url => {
+          const fileName = url.split("/").pop();
+          return { name: fileName };
+        })
+      );
 
-      if (data.attachmentUrls && Array.isArray(data.attachmentUrls)) {
-        setExistingAttachments(
-          data.attachmentUrls.map(url => ({
-            name: url.split("/").pop(),
-            url: baseUrl + url
-          }))
-        );
-      }
-
-      // 🔔 Send notifications to all invitees
+      // 🔔 Send notifications
       if (meetingData && meetingData.invitees) {
         const inviteeUserIds = meetingData.invitees.map(i => i.userId).filter(Boolean);
         if (inviteeUserIds.length > 0) {
@@ -177,7 +182,7 @@ export default function MeetingFileUpload({ meetingId }) {
                     <span className="text-2xl">{getFileIcon(attachment.name)}</span>
                     <span className="text-sm font-medium text-gray-900 truncate">{attachment.name}</span>
                   </div>
-                  <span className="text-blue-600 font-medium text-xs">Open</span>
+                  <span className="text-blue-600 font-medium text-xs">Download</span>
                 </div>
               ))}
             </div>
