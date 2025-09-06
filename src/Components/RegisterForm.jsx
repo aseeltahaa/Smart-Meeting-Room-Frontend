@@ -2,17 +2,20 @@ import { useState } from "react";
 import { FaUser, FaEnvelope, FaLock } from "react-icons/fa";
 import axios from "../api/axiosInstance";
 
-function RegisterForm() {
+function RegisterForm({ onUpdate }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("Employee");
+
+  const [errors, setErrors] = useState([]);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrors([]);
     setStatus("");
     setLoading(true);
 
@@ -20,9 +23,16 @@ function RegisterForm() {
       await axios.post("/Auth/register", { firstName, lastName, email, password, role });
       setStatus("✅ User registered successfully!");
       setFirstName(""); setLastName(""); setEmail(""); setPassword(""); setRole("Employee");
+
+      if (onUpdate) onUpdate(); // refresh other forms
     } catch (err) {
-      console.error(err);
-      setStatus("❌ Registration failed. Please try again later.");
+      if (err.response) {
+        const data = err.response.data;
+        if (Array.isArray(data)) setErrors(data.map((e) => e.description));
+        else if (data.message) setErrors([data.message]);
+        else setErrors(["Registration failed."]);
+      } else if (err.request) setErrors(["❌ Server did not respond. Please try again later."]);
+      else setErrors([`❌ ${err.message}`]);
     } finally {
       setLoading(false);
     }
@@ -38,6 +48,14 @@ function RegisterForm() {
   return (
     <div className="bg-white p-6 rounded-lg shadow-md h-fit w-full max-w-md mx-auto space-y-4">
       <h4 className="text-lg font-semibold text-black mb-2">Add User</h4>
+
+      {errors.length > 0 && (
+        <div className="bg-red-50 border border-red-400 text-red-700 p-2 rounded-md text-sm">
+          <ul className="list-disc list-inside space-y-1">
+            {errors.map((err, i) => <li key={i}>{err}</li>)}
+          </ul>
+        </div>
+      )}
 
       {status && (
         <p

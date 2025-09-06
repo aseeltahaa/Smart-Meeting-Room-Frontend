@@ -17,6 +17,7 @@ function UpdateFeature({ features, onFeatureChange }) {
   const handleSelectFeature = (id) => {
     const feature = features.find((f) => f.id === id);
     setSelectedFeature(feature);
+    setName(feature?.name || "");
     setStatus("");
   };
 
@@ -36,8 +37,7 @@ function UpdateFeature({ features, onFeatureChange }) {
     } catch (err) {
       console.error(err);
       setStatus(
-        "❌ " +
-          (err.response?.data?.message || "Failed to update feature. Please try again later.")
+        "❌ Failed to update feature: " + (err.response?.data?.message || err.message)
       );
     } finally {
       setLoading(false);
@@ -48,18 +48,22 @@ function UpdateFeature({ features, onFeatureChange }) {
     <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md mx-auto space-y-4">
       <h4 className="text-lg font-semibold">Update Feature</h4>
 
+      {/* Status Message */}
       {status && (
         <p
           className={`p-2 rounded-md text-sm ${
             status.startsWith("✅")
               ? "bg-green-50 text-green-600 border border-green-400"
-              : "bg-red-50 text-red-600 border border-red-400"
+              : status.startsWith("❌")
+              ? "bg-red-50 text-red-600 border border-red-400"
+              : "bg-yellow-50 text-yellow-600 border border-yellow-400"
           }`}
         >
           {status}
         </p>
       )}
 
+      {/* Feature Select */}
       <select
         value={selectedFeature?.id || ""}
         onChange={(e) => handleSelectFeature(e.target.value)}
@@ -73,6 +77,7 @@ function UpdateFeature({ features, onFeatureChange }) {
         ))}
       </select>
 
+      {/* Update Form */}
       {selectedFeature && (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input

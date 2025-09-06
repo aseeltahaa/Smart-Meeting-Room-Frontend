@@ -18,6 +18,7 @@ function AddFeature({ onFeatureChange }) {
       onFeatureChange(); // refresh list in FeatureManagement
     } catch (err) {
       console.error(err);
+      // ✅ Updated error reporting similar to second component
       setStatus(
         "❌ " +
           (err.response?.data?.message || "Failed to register feature. Please try again later.")
@@ -31,6 +32,7 @@ function AddFeature({ onFeatureChange }) {
     <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md mx-auto space-y-4">
       <h4 className="text-lg font-semibold">Add New Feature</h4>
 
+      {/* Status/Error Message */}
       {status && (
         <p
           className={`p-2 rounded-md text-sm ${

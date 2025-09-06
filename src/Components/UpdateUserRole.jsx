@@ -15,27 +15,31 @@ function UpdateUserRole() {
       setUsers(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error(err);
-      setStatus("⚠️ Failed to load users. Please try again later.");
+      setStatus("❌ Failed to load users. Please try again later.");
     }
   };
 
   useEffect(() => { fetchUsers(); }, []);
 
   const handleUpdateRole = async () => {
-    if (!selectedUser || !role) { 
-      setStatus("⚠️ Please select a user and a role."); 
-      return; 
+    if (!selectedUser || !role) {
+      setStatus("⚠️ Please select a user and a role.");
+      return;
     }
-    setLoading(true); setStatus("");
+    setLoading(true);
+    setStatus("");
+
     try {
       await axios.put(`/Auth/role/${selectedUser}`, { role });
       setStatus("✅ User role updated successfully!");
       setSelectedUser(""); setRole("");
-      fetchUsers(); // refresh dropdown
+      fetchUsers();
     } catch (err) {
       console.error(err);
       setStatus("❌ Failed to update role. Please try again later.");
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

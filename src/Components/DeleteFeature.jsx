@@ -9,7 +9,8 @@ function DeleteFeature({ features, onFeatureChange }) {
   const handleDelete = async () => {
     if (!selected) return;
 
-    setStatus(""); setConfirm(false);
+    setStatus(""); 
+    setConfirm(false);
 
     try {
       await axios.delete(`/Features/${selected}`);
@@ -29,6 +30,7 @@ function DeleteFeature({ features, onFeatureChange }) {
     <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md mx-auto space-y-4">
       <h4 className="text-lg font-semibold">Delete Feature</h4>
 
+      {/* Status/Error Message */}
       {status && (
         <p
           className={`p-2 rounded-md text-sm ${
@@ -41,6 +43,7 @@ function DeleteFeature({ features, onFeatureChange }) {
         </p>
       )}
 
+      {/* Feature Select */}
       <select
         value={selected || ""}
         onChange={(e) => { setSelected(e.target.value); setConfirm(true); setStatus(""); }}
@@ -54,9 +57,13 @@ function DeleteFeature({ features, onFeatureChange }) {
         ))}
       </select>
 
+      {/* Confirmation */}
       {confirm && selected && (
         <div className="flex flex-col gap-2 mt-2">
-          <p>Are you sure you want to delete <strong>{features.find(f => f.id === selected)?.name}</strong>?</p>
+          <p>
+            Are you sure you want to delete{" "}
+            <strong>{features.find(f => f.id === selected)?.name}</strong>?
+          </p>
           <div className="flex gap-2">
             <button
               className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md"

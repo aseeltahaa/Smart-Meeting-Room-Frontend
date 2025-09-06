@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "../api/axiosInstance";
 
-function DeleteUser() {
+function DeleteUser({ onUpdate }) {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState("");
   const [status, setStatus] = useState("");
@@ -14,7 +14,7 @@ function DeleteUser() {
       setUsers(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error(err);
-      setStatus("⚠️ Failed to load users. Please try again later.");
+      setStatus("❌ Failed to load users. Please try again later.");
     }
   };
 
@@ -22,12 +22,15 @@ function DeleteUser() {
 
   const handleDelete = async () => {
     if (!selectedUser) return;
-    setLoading(true); setStatus("");
+    setLoading(true);
+    setStatus("");
+
     try {
       await axios.delete(`/Auth/${selectedUser}`);
       setStatus("✅ User deleted successfully!");
       setSelectedUser(""); setConfirm(false);
       fetchUsers();
+      if (onUpdate) onUpdate();
     } catch (err) {
       console.error(err);
       setStatus("❌ Failed to delete user. Please try again later.");
