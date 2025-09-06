@@ -16,14 +16,19 @@ instance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Handle 401 Unauthorized globally
+// Handle 401 Unauthorized globally - BUT exclude auth endpoints
 instance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Token expired or invalid → clear storage and redirect
-      localStorage.clear();
-      window.location.href = '/';
+      // Don't redirect if this is an auth-related request failure
+      const isAuthRequest = error.config?.url?.includes('/Auth/');
+      
+      if (!isAuthRequest) {
+        // Token expired or invalid on protected routes → clear storage and redirect
+        localStorage.clear();
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

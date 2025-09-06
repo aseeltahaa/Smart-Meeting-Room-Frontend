@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import heroImage from '../assets/login.jpg';
 import axios from '../api/axiosInstance'; 
 import { Link, useNavigate } from 'react-router-dom';
@@ -14,8 +14,17 @@ function LoginPage() {
   const handleBlur = () => setFocusedInput('');
   const navigate = useNavigate();
 
+  // Clear any existing tokens when component mounts to prevent auto-redirects
+  useEffect(() => {
+    // Don't clear tokens here if you want users to stay logged in
+    // localStorage.removeItem('token');
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation(); // Prevent event bubbling
+    
+    // Clear any previous errors
     setError('');
     setLoading(true);
 
@@ -33,13 +42,28 @@ function LoginPage() {
       );
 
       axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
-      navigate('/profile');
+      
+      // Add a small delay to ensure state updates are processed
+      setTimeout(() => {
+        navigate('/profile', { replace: true });
+      }, 100);
+      
     } catch (err) {
-      if (err.response) setError(err.response.data?.message || 'Invalid email or password');
-      else if (err.request) setError('Server did not respond. Please try again later.');
-      else setError('An error occurred. Please try again.');
-    } finally {
+      // Set loading to false first to ensure error displays properly
       setLoading(false);
+      
+      let errorMessage = 'An error occurred. Please try again.';
+      
+      if (err.response) {
+        errorMessage = err.response.data?.message || 'Invalid email or password';
+      } else if (err.request) {
+        errorMessage = 'Server did not respond. Please try again later.';
+      }
+      
+      setError(errorMessage);
+      
+      // Don't navigate on error - let the user see the error message
+      return;
     }
   };
 
@@ -66,10 +90,16 @@ function LoginPage() {
         <form
           className="bg-white/10 backdrop-blur-md p-6 md:p-8 rounded-xl w-full max-w-md shadow-md flex flex-col gap-4 text-white"
           onSubmit={handleSubmit}
+          noValidate // Disable browser validation to prevent interference
         >
           <h1 className="text-2xl md:text-3xl font-bold text-center mb-2">Login</h1>
 
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {/* Error Message - More prominent styling */}
+          {error && (
+            <div className="bg-red-500/20 border border-red-500 rounded-lg p-3 mb-2">
+              <p className="text-red-200 text-sm font-medium">{error}</p>
+            </div>
+          )}
 
           {/* Email Input */}
           <div className={inputContainerClasses(focusedInput === 'email')}>
@@ -92,6 +122,7 @@ function LoginPage() {
               onFocus={() => handleFocus('email')}
               onBlur={handleBlur}
               className={inputClasses}
+              disabled={loading}
             />
           </div>
 
@@ -116,6 +147,7 @@ function LoginPage() {
               onFocus={() => handleFocus('password')}
               onBlur={handleBlur}
               className={inputClasses}
+              disabled={loading}
             />
           </div>
 
@@ -123,7 +155,7 @@ function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-[#539D98] rounded-lg text-white text-base mt-2 hover:bg-[#437e79] transition-colors duration-300"
+            className="w-full py-3 bg-[#539D98] rounded-lg text-white text-base mt-2 hover:bg-[#437e79] transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Logging in...' : 'Login'}
           </button>
