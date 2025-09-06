@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "../api/axiosInstance";
+import notificationService from "../services/notificationService";
 
 function EditMeetingForm({ meetingId }) {
   const [formData, setFormData] = useState({
@@ -24,7 +25,10 @@ function EditMeetingForm({ meetingId }) {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
 
-  // Simple UTC <-> Beirut conversion
+  // Get current user email from localStorage (for notifications)
+  const currentUser = JSON.parse(localStorage.getItem("user"));
+  const currentUserEmail = currentUser?.email || "Meeting Organizer";
+
   const convertUTCToBeirut = (utcString) => {
     if (!utcString) return null;
     const utcDate = new Date(utcString);
@@ -32,9 +36,7 @@ function EditMeetingForm({ meetingId }) {
     return new Date(utcDate.getTime() + beirutOffset * 60 * 1000);
   };
 
-  // Convert Beirut local datetime-local string to UTC ISO string
   const convertBeirutToUTC = (selectedDate, timeString) => {
-    // selectedDate: Date object, timeString: "HH:mm"
     return new Date(selectedDate.toISOString().split('T')[0] + 'T' + timeString).toISOString();
   };
 
@@ -50,13 +52,9 @@ function EditMeetingForm({ meetingId }) {
         ]);
 
         const meeting = meetingRes.data;
-
-        // Convert UTC times from API to Beirut for form display
         const startBeirut = convertUTCToBeirut(meeting.startTime);
         const endBeirut = convertUTCToBeirut(meeting.endTime);
-        console.log("Meeting data:", meeting);
-        console.log("Start time in Beirut:", startBeirut);
-        console.log("End time in Beirut:", endBeirut);
+
         setFormData({
           ...meeting,
           startTime: startBeirut
@@ -70,10 +68,9 @@ function EditMeetingForm({ meetingId }) {
         setRooms(Array.isArray(roomsRes.data) ? roomsRes.data : []);
         setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
 
-        // Set selected room and user for display
         const room = roomsRes.data.find((r) => r.id === meeting.roomId);
         const user = usersRes.data.find((u) => u.id === meeting.userId);
-        
+
         if (room) {
           setSelectedRoom(room);
           setRoomSearch(room.name);
@@ -114,9 +111,7 @@ function EditMeetingForm({ meetingId }) {
     setStatus("");
 
     try {
-      // Validate times
       if (formData.startTime && formData.endTime) {
-        // formData.startTime/endTime are in "YYYY-MM-DDTHH:mm" format
         const startDate = new Date(formData.startTime);
         const endDate = new Date(formData.endTime);
         const startUTC = convertBeirutToUTC(startDate, formData.startTime.split('T')[1]);
@@ -128,23 +123,34 @@ function EditMeetingForm({ meetingId }) {
           return;
         }
 
-        // Prepare payload with UTC times for API
-        const payload = {
-          ...formData,
-          startTime: startUTC,
-          endTime: endUTC,
-        };
-
+        const payload = { ...formData, startTime: startUTC, endTime: endUTC };
         await api.put(`/Meeting/${meetingId}`, payload);
         setStatus("✅ Meeting updated successfully!");
+
+        // 🔔 Send notifications to invitees
+        const meetingRes = await api.get(`/Meeting/${meetingId}`);
+        const updatedMeeting = meetingRes.data;
+
+        if (updatedMeeting.invitees && updatedMeeting.invitees.length > 0) {
+          const inviteeUserIds = updatedMeeting.invitees
+            .map(inv => inv.userId)
+            .filter(Boolean);
+
+          if (inviteeUserIds.length > 0) {
+            await notificationService.notifyMeetingUpdated(
+              inviteeUserIds,
+              updatedMeeting.title || "Meeting",
+              currentUserEmail
+            );
+            console.log("✅ Meeting update notifications sent to invitees");
+          }
+        }
       } else {
         setStatus("❌ Start and end times are required.");
       }
     } catch (err) {
       console.error(err);
-      setStatus(
-        "❌ Failed to update meeting: " + (err.response?.data || err.message)
-      );
+      setStatus("❌ Failed to update meeting: " + (err.response?.data || err.message));
     } finally {
       setSaving(false);
     }
@@ -153,27 +159,18 @@ function EditMeetingForm({ meetingId }) {
   if (loading) return <p>Loading meeting details...</p>;
 
   const filteredRooms = !selectedRoom
-    ? rooms.filter((r) =>
-        r.name.toLowerCase().includes(roomSearch.toLowerCase())
-      )
+    ? rooms.filter((r) => r.name.toLowerCase().includes(roomSearch.toLowerCase()))
     : [];
   const filteredUsers = !selectedUser
-    ? users.filter((u) =>
-        u.email.toLowerCase().includes(userSearch.toLowerCase())
-      )
+    ? users.filter((u) => u.email.toLowerCase().includes(userSearch.toLowerCase()))
     : [];
 
   return (
-    <form
-      className="bg-white p-6 rounded shadow-md max-w-lg mx-auto"
-      onSubmit={handleSubmit}
-    >
+    <form className="bg-white p-6 rounded shadow-md max-w-lg mx-auto" onSubmit={handleSubmit}>
       <h4 className="text-lg font-semibold mb-4">Edit Meeting</h4>
-      
       <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
         <p className="text-sm text-blue-800">
-          <strong>Note:</strong> All times are displayed and should be entered in Beirut timezone. 
-          They will be automatically converted to UTC for storage.
+          <strong>Note:</strong> All times are displayed and should be entered in Beirut timezone. They will be automatically converted to UTC for storage.
         </p>
       </div>
 
@@ -289,11 +286,7 @@ function EditMeetingForm({ meetingId }) {
       {status && (
         <p
           className={`mb-2 text-sm ${
-            status.startsWith("✅")
-              ? "text-green-600"
-              : status.startsWith("❌")
-              ? "text-red-600"
-              : "text-yellow-600"
+            status.startsWith("✅") ? "text-green-600" : status.startsWith("❌") ? "text-red-600" : "text-yellow-600"
           }`}
         >
           {status}
