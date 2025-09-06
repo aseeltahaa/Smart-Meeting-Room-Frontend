@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import api from "../api/axiosInstance";
+import notificationService from "../services/notificationService";
 
 export default function MeetingFileUpload({ meetingId }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [existingAttachments, setExistingAttachments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [fetchingMeeting, setFetchingMeeting] = useState(true);
+  const [meetingData, setMeetingData] = useState(null);
 
   const maxFiles = 5;
   const allowedExtensions = [".jpg", ".jpeg", ".png", ".pdf", ".docx", ".xlsx", ".txt"];
@@ -18,6 +20,8 @@ export default function MeetingFileUpload({ meetingId }) {
       if (!meetingId) return;
       try {
         const { data } = await api.get(`/Meeting/${meetingId}`);
+        setMeetingData(data);
+
         if (data.attachmentUrls && Array.isArray(data.attachmentUrls)) {
           setExistingAttachments(
             data.attachmentUrls.map(url => ({
@@ -116,6 +120,8 @@ export default function MeetingFileUpload({ meetingId }) {
 
       // Refresh attachments
       const { data } = await api.get(`/Meeting/${meetingId}`);
+      setMeetingData(data);
+
       if (data.attachmentUrls && Array.isArray(data.attachmentUrls)) {
         setExistingAttachments(
           data.attachmentUrls.map(url => ({
@@ -124,6 +130,20 @@ export default function MeetingFileUpload({ meetingId }) {
           }))
         );
       }
+
+      // 🔔 Send notifications to all invitees
+      if (meetingData && meetingData.invitees) {
+        const inviteeUserIds = meetingData.invitees.map(i => i.userId).filter(Boolean);
+        if (inviteeUserIds.length > 0) {
+          await notificationService.notifyFilesUploaded(
+            inviteeUserIds,
+            meetingData.title || "Meeting",
+            selectedFiles.map(f => f.name)
+          );
+          console.log("✅ File upload notifications sent");
+        }
+      }
+
     } catch (err) {
       console.error(err);
       alert(err?.response?.data || err.message || "Upload failed");
