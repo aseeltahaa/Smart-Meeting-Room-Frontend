@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "../api/axiosInstance";
+import notificationService from '../services/notificationService';
 import ViewHeader from "../Components/ViewHeader.jsx";
 
 function NotesView() {
@@ -10,6 +11,7 @@ function NotesView() {
   const [newNote, setNewNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [currentUserName, setCurrentUserName] = useState('Meeting Participant');
 
   // Modal state
   const [confirmModal, setConfirmModal] = useState({
@@ -26,6 +28,7 @@ function NotesView() {
     try {
       const res = await axios.get(`/Users/me`);
       setCurrentUserId(res.data.id);
+      setCurrentUserName(res.data.name || res.data.email || 'Meeting Participant');
     } catch (err) {
       console.error("Failed to fetch current user:", err);
     }
@@ -48,9 +51,31 @@ function NotesView() {
 
     setSubmitting(true);
     try {
-      await axios.post(`/Meeting/${id}/notes`, { content: newNote });
+      const res = await axios.post(`/Meeting/${id}/notes`, { content: newNote });
       setNewNote("");
-      fetchMeeting();
+      
+      // Refresh meeting data to get updated notes
+      await fetchMeeting();
+
+      // 🔔 Send notifications to all invitees
+      if (meeting && meeting.invitees) {
+        try {
+          const inviteeUserIds = meeting.invitees
+            .map(invitee => invitee.userId)
+            .filter(userId => userId && userId !== currentUserId);
+
+          if (inviteeUserIds.length > 0) {
+            await notificationService.notifyNoteAdded(
+              inviteeUserIds,
+              meeting.title || 'Meeting',
+              res.data.content || newNote,
+              currentUserName
+            );
+          }
+        } catch (notifError) {
+          console.error('❌ Failed to send note notification:', notifError);
+        }
+      }
     } catch (err) {
       console.error("Failed to add note:", err);
     } finally {

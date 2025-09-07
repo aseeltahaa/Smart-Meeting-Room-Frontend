@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom"; 
 import { useEffect, useState } from "react";
 import axios from "../api/axiosInstance";
+import notificationService from '../services/notificationService';
 import ViewHeader from "../Components/ViewHeader.jsx";
 
 const API_BASE_URL = "https://localhost:7074";
@@ -16,6 +17,7 @@ function TasksView() {
   const { id } = useParams();
   const [actionItems, setActionItems] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [meetingData, setMeetingData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedFiles, setSelectedFiles] = useState({}); // { [itemId]: File[] }
 
@@ -27,6 +29,7 @@ function TasksView() {
           axios.get(`/Users/me`)
         ]);
         setActionItems(meetingRes.data.actionItems || []);
+        setMeetingData(meetingRes.data);
         setCurrentUser(userRes.data);
       } catch (err) {
         console.error(err);
@@ -56,10 +59,73 @@ function TasksView() {
       }
 
       const res = await axios.put(`/Meeting/${id}/action-items/${itemId}/toggle-status`);
+      const updatedActionItem = res.data;
+      
       setActionItems((prev) =>
-        prev.map((item) => (item.id === itemId ? res.data : item))
+        prev.map((item) => (item.id === itemId ? updatedActionItem : item))
       );
       setSelectedFiles((prev) => ({ ...prev, [itemId]: [] }));
+
+      // 🔔 Send notification to meeting creator
+      console.log('🔍 Notification Debug Info:', {
+        hasMeetingData: !!meetingData,
+        meetingUserId: meetingData?.userId,
+        hasCurrentUser: !!currentUser,
+        currentUserId: currentUser?.id,
+        updatedActionItemStatus: updatedActionItem?.status,
+        actionItemId: itemId
+      });
+
+      if (meetingData && meetingData.userId && currentUser) {
+        try {
+          const actionItem = actionItems.find(ai => ai.id === itemId);
+          const currentUserName = currentUser.name || currentUser.email || 'User';
+          const meetingTitle = meetingData.title || 'Meeting';
+          
+          console.log('📨 Preparing notification:', {
+            creatorId: meetingData.userId,
+            actionItemDescription: actionItem?.description,
+            meetingTitle,
+            submitterName: currentUserName,
+            status: updatedActionItem.status
+          });
+          
+          // Don't notify if current user is the meeting creator
+          if (meetingData.userId === currentUser.id) {
+            console.log('ℹ️ Skipping notification - user is the meeting creator');
+            return;
+          }
+          
+          if (updatedActionItem.status === 'Submitted') {
+            // Notify about submission
+            await notificationService.notifyActionItemSubmission(
+              meetingData.userId,
+              actionItem?.description || 'Action item',
+              meetingTitle,
+              currentUserName
+            );
+            console.log('✅ Submission notification sent to meeting creator');
+          } else if (updatedActionItem.status === 'Pending') {
+            // Notify about unsubmission
+            await notificationService.notifyActionItemUnsubmission(
+              meetingData.userId,
+              actionItem?.description || 'Action item',
+              meetingTitle,
+              currentUserName
+            );
+            console.log('✅ Unsubmission notification sent to meeting creator');
+          }
+        } catch (notifError) {
+          console.error('❌ Failed to send action item notification:', notifError);
+          console.error('❌ Full error details:', notifError);
+        }
+      } else {
+        console.log('❌ Missing required data for notification:', {
+          meetingData: !!meetingData,
+          meetingUserId: meetingData?.userId,
+          currentUser: !!currentUser
+        });
+      }
     } catch (err) {
       console.error("Error submitting task:", err);
     }
