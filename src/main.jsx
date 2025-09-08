@@ -14,14 +14,17 @@ import MeetingDetailsPage from './Pages/MeetingDetailsPage.jsx';
 import MeetingInviteesPage from './Pages/MeetingInviteesPage.jsx';
 import MeetingActionsPage from './Pages/MeetingActionsPage.jsx';
 import MeetingNotesPage from './Pages/MeetingNotesPage.jsx';
-import MeetingDetailsView from './Pages/MeetingDetailsView.jsx'
+import MeetingDetailsView from './Pages/MeetingDetailsView.jsx';
 import NotesView from './Pages/NotesView.jsx';
 import TasksView from './Pages/TasksView.jsx';
 import ManageUsers from './Pages/ManageUsers.jsx';
 import ManageRooms from './Pages/ManageRooms.jsx';
 import ManageFeatures from './Pages/ManageFeatures.jsx';
-
+import AdminRoute from './AdminRoutes.jsx';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+
+// Example: get current user from localStorage
+const currentUser = JSON.parse(localStorage.getItem("user"));
 
 const router = createBrowserRouter([
   // General / Main App
@@ -35,10 +38,10 @@ const router = createBrowserRouter([
   { path: "/profile", element: <Profile /> },
   { path: "/reset-password", element: <ResetPassword /> },
 
-  // Admin Routes
-  {path : "/RoomManagement", element: <ManageRooms />},
-  {path : "/FeatureManagement", element: <ManageFeatures />},
-  {path : "/UserManagement", element: <ManageUsers />},
+  // Admin Routes (Protected)
+  { path: "/RoomManagement", element: <AdminRoute user={currentUser}><ManageRooms /></AdminRoute> },
+  { path: "/FeatureManagement", element: <AdminRoute user={currentUser}><ManageFeatures /></AdminRoute> },
+  { path: "/UserManagement", element: <AdminRoute user={currentUser}><ManageUsers /></AdminRoute> },
 
   // Meetings Pages
   { path: "/meetings/:id/details", element: <MeetingDetailsPage /> },
@@ -51,8 +54,8 @@ const router = createBrowserRouter([
   { path: "/meetings/:id/notesView", element: <NotesView /> },
   { path: "/meetings/:id/tasksView", element: <TasksView /> },
 
-  //Notifications
-  { path : "/notifications", element: <Notifications /> },
+  // Notifications
+  { path: "/notifications", element: <Notifications /> },
 
   // Catch-all
   { path: "*", element: <NotFound /> }
