@@ -13,11 +13,18 @@ function NotesView() {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [currentUserName, setCurrentUserName] = useState('Meeting Participant');
 
-  // Modal state
-  const [confirmModal, setConfirmModal] = useState({
-    isOpen: false,
-    noteId: null,
-  });
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, noteId: null });
+
+  // Helper for API error messages
+  const getApiErrorMessage = (err, fallback = "❌ Something went wrong.") => {
+    if (err.response) {
+      return err.response.data?.message || err.response.data?.error || JSON.stringify(err.response.data) || fallback;
+    } else if (err.request) {
+      return "❌ No response from server. Please try again.";
+    } else {
+      return `❌ ${err.message}`;
+    }
+  };
 
   useEffect(() => {
     fetchCurrentUser();
@@ -30,7 +37,7 @@ function NotesView() {
       setCurrentUserId(res.data.id);
       setCurrentUserName(res.data.name || res.data.email || 'Meeting Participant');
     } catch (err) {
-      console.error("Failed to fetch current user:", err);
+      console.error("Failed to fetch current user:", getApiErrorMessage(err));
     }
   };
 
@@ -39,7 +46,7 @@ function NotesView() {
       const res = await axios.get(`/Meeting/${id}`);
       setMeeting(res.data);
     } catch (err) {
-      console.error("Failed to fetch meeting:", err);
+      console.error("Failed to fetch meeting:", getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -53,31 +60,33 @@ function NotesView() {
     try {
       const res = await axios.post(`/Meeting/${id}/notes`, { content: newNote });
       setNewNote("");
-      
-      // Refresh meeting data to get updated notes
+
+      // Refresh meeting data
       await fetchMeeting();
 
-      // 🔔 Send notifications to all invitees
-      if (meeting && meeting.invitees) {
-        try {
-          const inviteeUserIds = meeting.invitees
-            .map(invitee => invitee.userId)
-            .filter(userId => userId && userId !== currentUserId);
+      // 🔔 Send notifications to invitees (excluding current user)
+      if (meeting?.invitees?.length > 0) {
+        const inviteeUserIds = meeting.invitees
+          .map(invitee => invitee.userId)
+          .filter(userId => userId && userId !== currentUserId);
 
-          if (inviteeUserIds.length > 0) {
+        if (inviteeUserIds.length > 0) {
+          try {
             await notificationService.notifyNoteAdded(
               inviteeUserIds,
               meeting.title || 'Meeting',
               res.data.content || newNote,
               currentUserName
             );
+            console.log("✅ Note notification sent");
+          } catch (notifErr) {
+            console.error("❌ Failed to send note notification:", notifErr);
           }
-        } catch (notifError) {
-          console.error('❌ Failed to send note notification:', notifError);
         }
       }
+
     } catch (err) {
-      console.error("Failed to add note:", err);
+      console.error("Failed to add note:", getApiErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
@@ -93,9 +102,9 @@ function NotesView() {
 
     try {
       await axios.delete(`/Meeting/${id}/notes/${noteId}`);
-      fetchMeeting();
+      await fetchMeeting();
     } catch (err) {
-      console.error("Failed to delete note:", err);
+      console.error("Failed to delete note:", getApiErrorMessage(err));
     } finally {
       setConfirmModal({ isOpen: false, noteId: null });
     }

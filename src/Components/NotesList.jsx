@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import axios from '../api/axiosInstance';
-import notificationService from '../services/notificationService';
+import React, { useState, useEffect } from "react";
+import axios from "../api/axiosInstance";
+import notificationService from "../services/notificationService";
 
 function NotesList({ meetingId }) {
   const [notes, setNotes] = useState([]);
-  const [newNote, setNewNote] = useState('');
+  const [newNote, setNewNote] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [meetingData, setMeetingData] = useState(null);
 
   // Fetch notes on mount or when meetingId changes
@@ -21,7 +21,17 @@ function NotesList({ meetingId }) {
         setNotes(Array.isArray(res.data.notes) ? res.data.notes : []);
       } catch (err) {
         console.error(err);
-        setError('❌ Failed to load notes.');
+        let message = "❌ Failed to load notes.";
+        if (err.response) {
+          message =
+            err.response.data?.message || err.response.data?.error || message;
+        } else if (err.request) {
+          message = "❌ No response from server. Please try again.";
+        } else {
+          message = `❌ ${err.message}`;
+        }
+
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -33,52 +43,77 @@ function NotesList({ meetingId }) {
   const addNote = async () => {
     if (!newNote.trim()) return;
     setError(null);
-    setMessage('');
+    setMessage("");
     try {
-      const res = await axios.post(`/Meeting/${meetingId}/notes`, { content: newNote });
-      
-      // Add new note locally
-      setNotes(prev => [...prev, res.data]);
-      setNewNote('');
-      setMessage('✅ Note added successfully!');
+      const res = await axios.post(`/Meeting/${meetingId}/notes`, {
+        content: newNote,
+      });
 
-      // 🔔 Send notifications to all invitees
+      setNotes((prev) => [...prev, res.data]);
+      setNewNote("");
+      setMessage("✅ Note added successfully!");
+
       if (meetingData && meetingData.invitees) {
         try {
-          // Get all invitee user IDs
           const inviteeUserIds = meetingData.invitees
-            .map(invitee => invitee.userId)
-            .filter(userId => userId); // Remove any undefined/null values
-
+            .map((invitee) => invitee.userId)
+            .filter((userId) => userId);
           if (inviteeUserIds.length > 0) {
             await notificationService.notifyNoteAdded(
               inviteeUserIds,
-              meetingData.title || 'Meeting',
+              meetingData.title || "Meeting",
               res.data.content,
-              'Meeting Participant' // Since we don't have current user, use generic name
+              "Meeting Participant"
             );
-            console.log('✅ Note notification sent to', inviteeUserIds.length, 'invitees');
           }
         } catch (notifError) {
-          console.error('❌ Failed to send note notification:', notifError);
+          console.error("❌ Failed to send note notification:", notifError);
         }
       }
     } catch (err) {
       console.error(err);
-      setError('❌ Failed to add note.');
+
+      let message = "❌ Failed to add note.";
+      if (err.response) {
+        message =
+          err.response.data?.message ||
+          err.response.data?.error ||
+          JSON.stringify(err.response.data) ||
+          message;
+      } else if (err.request) {
+        message = "❌ No response from server. Please try again.";
+      } else {
+        message = `❌ ${err.message}`;
+      }
+
+      setError(message);
     }
   };
 
   const deleteNote = async (noteId) => {
     setError(null);
-    setMessage('');
+    setMessage("");
     try {
       await axios.delete(`/Meeting/${meetingId}/notes/${noteId}`);
-      setNotes(prev => prev.filter(n => n.id !== noteId));
-      setMessage('✅ Note deleted successfully!');
+      setNotes((prev) => prev.filter((n) => n.id !== noteId));
+      setMessage("✅ Note deleted successfully!");
     } catch (err) {
       console.error(err);
-      setError('❌ Failed to delete note.');
+
+      let message = "❌ Failed to delete note.";
+      if (err.response) {
+        message =
+          err.response.data?.message ||
+          err.response.data?.error ||
+          JSON.stringify(err.response.data) ||
+          message;
+      } else if (err.request) {
+        message = "❌ No response from server. Please try again.";
+      } else {
+        message = `❌ ${err.message}`;
+      }
+
+      setError(message);
     }
   };
 
@@ -95,7 +130,7 @@ function NotesList({ meetingId }) {
         <input
           type="text"
           value={newNote}
-          onChange={e => setNewNote(e.target.value)}
+          onChange={(e) => setNewNote(e.target.value)}
           placeholder="Add a note"
           className="border px-2 py-1 rounded flex-1"
         />
@@ -108,8 +143,11 @@ function NotesList({ meetingId }) {
       </div>
 
       <ul className="space-y-2">
-        {(notes || []).map(note => (
-          <li key={note.id} className="flex justify-between items-center border-b pb-1">
+        {(notes || []).map((note) => (
+          <li
+            key={note.id}
+            className="flex justify-between items-center border-b pb-1"
+          >
             <span>{note.content}</span>
             <button
               onClick={() => deleteNote(note.id)}
