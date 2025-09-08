@@ -13,9 +13,26 @@ const formatBeirut = (iso) => {
   return new Date(d.toLocaleString("en-US", { timeZone: "Asia/Beirut" }));
 };
 
+// Convert UTC → Beirut time
+const convertUTCToBeirut = (utcString) => {
+  if (!utcString) return null;
+  const utcDate = new Date(utcString);
+  const beirutOffset = 3 * 60; // Beirut is UTC+3
+  return new Date(utcDate.getTime() + beirutOffset * 60 * 1000);
+};
+
+// Format date & time in Beirut
 const formatDateTime = (iso, fallback = "N/A") => {
-  const dt = formatBeirut(iso);
-  return dt ? dt.toLocaleString() : fallback;
+  const dt = convertUTCToBeirut(iso);
+  if (!dt) return fallback;
+  return dt.toLocaleString("en-US", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 };
 
 const getFileInfo = (url = "") => {
