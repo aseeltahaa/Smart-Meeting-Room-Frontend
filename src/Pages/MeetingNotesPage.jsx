@@ -1,10 +1,31 @@
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import axios from "../api/axiosInstance";
 import NotesList from "../Components/NotesList.jsx";
 import Footer from '../Components/Footer.jsx';
 import MeetingHeader from '../Components/MeetingHeader.jsx';
+import { FaLock } from "react-icons/fa"; // optional lock icon
 
 function MeetingNotesPage() {
   const { id } = useParams();
+  const [meeting, setMeeting] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!id) return;
+    const fetchMeeting = async () => {
+      try {
+        const { data } = await axios.get(`/Meeting/${id}`);
+        setMeeting(data);
+      } catch (err) {
+        console.error("Failed to fetch meeting:", err);
+        setMeeting(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMeeting();
+  }, [id]);
 
   if (!id) {
     return (
@@ -18,6 +39,11 @@ function MeetingNotesPage() {
     );
   }
 
+  if (loading) return <p className="text-center mt-10">Loading...</p>;
+  if (!meeting) return <p className="text-center mt-10 text-red-600">Meeting not found</p>;
+
+  const hasMeetingStarted = new Date(meeting.startTime) <= new Date();
+
   return (
     <>
       <MeetingHeader meetingId={id} initialTab="notes" />
@@ -25,7 +51,15 @@ function MeetingNotesPage() {
       <div className="max-w-6xl mx-auto mt-8 px-4 md:px-0 space-y-8">
         <div className="bg-white shadow-md rounded-lg p-6">
           <h2 className="text-2xl font-semibold mb-4 border-b pb-2">Notes</h2>
-          <NotesList meetingId={id} />
+
+          {hasMeetingStarted ? (
+            <NotesList meetingId={id} />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 text-gray-500">
+              <FaLock className="text-4xl mb-4" />
+              <p className="text-lg">Notes are locked until the meeting starts.</p>
+            </div>
+          )}
         </div>
 
         <div className="h-16" />

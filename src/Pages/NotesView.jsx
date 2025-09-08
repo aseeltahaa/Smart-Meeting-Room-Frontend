@@ -1,8 +1,9 @@
 import { useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import axios from "../api/axiosInstance";
 import notificationService from '../services/notificationService';
 import ViewHeader from "../Components/ViewHeader.jsx";
+import { FaLock } from "react-icons/fa";
 
 function NotesView() {
   const { id } = useParams();
@@ -12,7 +13,6 @@ function NotesView() {
   const [submitting, setSubmitting] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [currentUserName, setCurrentUserName] = useState('Meeting Participant');
-
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, noteId: null });
 
   // Helper for API error messages
@@ -52,6 +52,12 @@ function NotesView() {
     }
   };
 
+  const hasMeetingStarted = () => {
+    if (!meeting?.startTime) return false;
+    return new Date() >= new Date(meeting.startTime);
+  };
+  const meetingStarted = hasMeetingStarted();
+
   const handleAddNote = async (e) => {
     e.preventDefault();
     if (!newNote.trim()) return;
@@ -60,11 +66,8 @@ function NotesView() {
     try {
       const res = await axios.post(`/Meeting/${id}/notes`, { content: newNote });
       setNewNote("");
-
-      // Refresh meeting data
       await fetchMeeting();
 
-      // 🔔 Send notifications to invitees (excluding current user)
       if (meeting?.invitees?.length > 0) {
         const inviteeUserIds = meeting.invitees
           .map(invitee => invitee.userId)
@@ -78,7 +81,6 @@ function NotesView() {
               res.data.content || newNote,
               currentUserName
             );
-            console.log("✅ Note notification sent");
           } catch (notifErr) {
             console.error("❌ Failed to send note notification:", notifErr);
           }
@@ -118,23 +120,30 @@ function NotesView() {
       <ViewHeader meetingId={id} />
       <div className="max-w-5xl mx-auto p-6 space-y-4">
 
-        {/* Add Note Form */}
-        <form onSubmit={handleAddNote} className="mb-6 space-y-2">
-          <textarea
-            value={newNote}
-            onChange={(e) => setNewNote(e.target.value)}
-            className="w-full p-3 border rounded-md"
-            placeholder="Write a new note..."
-            rows={3}
-          />
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-            disabled={submitting}
-          >
-            {submitting ? "Adding..." : "Add Note"}
-          </button>
-        </form>
+        {/* Add Note Form or Locked Display */}
+        {meetingStarted ? (
+          <form onSubmit={handleAddNote} className="mb-6 space-y-2">
+            <textarea
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              className="w-full p-3 border rounded-md"
+              placeholder="Write a new note..."
+              rows={3}
+            />
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              disabled={submitting}
+            >
+              {submitting ? "Adding..." : "Add Note"}
+            </button>
+          </form>
+        ) : (
+          <div className="mb-6 p-4 border rounded-md flex items-center justify-center text-gray-500 space-x-2">
+            <FaLock className="text-gray-400" />
+            <span>Notes are locked until the meeting starts.</span>
+          </div>
+        )}
 
         {/* Notes */}
         {meeting.notes?.length > 0 ? (
