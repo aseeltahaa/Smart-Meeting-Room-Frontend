@@ -8,11 +8,20 @@ export default function MeetingFileUpload({ meetingId }) {
   const [loading, setLoading] = useState(false);
   const [fetchingMeeting, setFetchingMeeting] = useState(true);
   const [meetingData, setMeetingData] = useState(null);
-
   const maxFiles = 5;
   const allowedExtensions = [".jpg", ".jpeg", ".png", ".pdf", ".docx", ".xlsx", ".txt"];
   const maxSize = 5 * 1024 * 1024; // 5MB
-  const baseUrl = "https://localhost:7074"; // backend base URL
+
+  // Helper to extract API error messages
+  const getApiErrorMessage = (err, fallback = "❌ Something went wrong.") => {
+    if (err.response) {
+      return err.response.data?.message || err.response.data?.error || JSON.stringify(err.response.data) || fallback;
+    } else if (err.request) {
+      return "❌ No response from server. Please try again.";
+    } else {
+      return `❌ ${err.message}`;
+    }
+  };
 
   // Fetch meeting details and attachments
   useEffect(() => {
@@ -30,8 +39,9 @@ export default function MeetingFileUpload({ meetingId }) {
             })
           );
         }
-      } catch (error) {
-        console.error("Failed to fetch meeting data:", error);
+      } catch (err) {
+        console.error("Failed to fetch meeting data:", err);
+        alert(getApiErrorMessage(err, "❌ Failed to load meeting data."));
       } finally {
         setFetchingMeeting(false);
       }
@@ -60,10 +70,9 @@ export default function MeetingFileUpload({ meetingId }) {
   const handleAttachmentClick = async (attachment) => {
     try {
       const response = await api.get(`/files/meetings/${meetingId}/${attachment.name}`, {
-        responseType: "blob", // get the file as blob
+        responseType: "blob",
       });
 
-      // Create a temporary URL for the blob
       const fileURL = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = fileURL;
@@ -74,7 +83,7 @@ export default function MeetingFileUpload({ meetingId }) {
       window.URL.revokeObjectURL(fileURL);
     } catch (err) {
       console.error("Failed to download file:", err);
-      alert("You are not authorized to view this file or it failed to load.");
+      alert(getApiErrorMessage(err, "You are not authorized to view this file or it failed to load."));
     }
   };
 
@@ -104,12 +113,7 @@ export default function MeetingFileUpload({ meetingId }) {
   };
 
   const handleRemove = (index) => setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    handleFiles(Array.from(e.dataTransfer.files));
-  };
-
+  const handleDrop = (e) => { e.preventDefault(); handleFiles(Array.from(e.dataTransfer.files)); };
   const handleDragOver = (e) => e.preventDefault();
 
   const handleSubmit = async () => {
@@ -130,28 +134,29 @@ export default function MeetingFileUpload({ meetingId }) {
       // Refresh attachments
       const { data: refreshedData } = await api.get(`/Meeting/${meetingId}`);
       setExistingAttachments(
-        refreshedData.attachmentUrls.map(url => {
-          const fileName = url.split("/").pop();
-          return { name: fileName };
-        })
+        refreshedData.attachmentUrls.map(url => ({ name: url.split("/").pop() }))
       );
 
-      // 🔔 Send notifications
-      if (meetingData && meetingData.invitees) {
+      // 🔔 Send notifications to invitees
+      if (meetingData?.invitees?.length > 0) {
         const inviteeUserIds = meetingData.invitees.map(i => i.userId).filter(Boolean);
         if (inviteeUserIds.length > 0) {
-          await notificationService.notifyFilesUploaded(
-            inviteeUserIds,
-            meetingData.title || "Meeting",
-            selectedFiles.map(f => f.name)
-          );
-          console.log("✅ File upload notifications sent");
+          try {
+            await notificationService.notifyFilesUploaded(
+              inviteeUserIds,
+              meetingData.title || "Meeting",
+              selectedFiles.map(f => f.name)
+            );
+            console.log("✅ File upload notifications sent");
+          } catch (notifErr) {
+            console.error("❌ Failed to send file upload notifications:", notifErr);
+          }
         }
       }
 
     } catch (err) {
       console.error(err);
-      alert(err?.response?.data || err.message || "Upload failed");
+      alert(getApiErrorMessage(err, "❌ File upload failed."));
     } finally {
       setLoading(false);
     }

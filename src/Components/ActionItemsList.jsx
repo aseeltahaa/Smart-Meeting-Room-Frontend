@@ -2,8 +2,6 @@ import React, { useState, useEffect } from "react";
 import axios from "../api/axiosInstance";
 import notificationService from "../services/notificationService";
 
-const API_BASE_URL = "https://localhost:7074";
-
 function ActionItemsList({ meetingId }) {
   const [actionItems, setActionItems] = useState([]);
   const [newItem, setNewItem] = useState({ description: "", type: "", deadline: "", email: "" });
@@ -15,6 +13,17 @@ function ActionItemsList({ meetingId }) {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [suggestions, setSuggestions] = useState([]);
+
+  // Helper to extract API error messages
+  const getApiErrorMessage = (err, fallback = "❌ Something went wrong.") => {
+    if (err.response) {
+      return err.response.data?.message || err.response.data?.error || JSON.stringify(err.response.data) || fallback;
+    } else if (err.request) {
+      return "❌ No response from server. Please try again.";
+    } else {
+      return `❌ ${err.message}`;
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,7 +44,7 @@ function ActionItemsList({ meetingId }) {
         setUsersMap(map);
       } catch (err) {
         console.error(err);
-        setError("❌ Failed to load action items or users.");
+        setError(getApiErrorMessage(err, "❌ Failed to load action items or users."));
       } finally {
         setLoading(false);
       }
@@ -107,7 +116,7 @@ function ActionItemsList({ meetingId }) {
       }
     } catch (err) {
       console.error(err);
-      setError("❌ Failed to add action item.");
+      setError(getApiErrorMessage(err, "❌ Failed to add action item."));
     }
   };
 
@@ -119,7 +128,7 @@ function ActionItemsList({ meetingId }) {
       setMessage("🗑️ Action item deleted!");
     } catch (err) {
       console.error(err);
-      setError("❌ Failed to delete action item.");
+      setError(getApiErrorMessage(err, "❌ Failed to delete action item."));
     }
   };
 
@@ -131,7 +140,7 @@ function ActionItemsList({ meetingId }) {
       setMessage("✅ Action item accepted!");
     } catch (err) {
       console.error(err);
-      setError("❌ Failed to accept action item.");
+      setError(getApiErrorMessage(err, "❌ Failed to accept action item."));
     }
   };
 
@@ -143,34 +152,30 @@ function ActionItemsList({ meetingId }) {
       setMessage("❌ Action item rejected!");
     } catch (err) {
       console.error(err);
-      setError("❌ Failed to reject action item.");
+      setError(getApiErrorMessage(err, "❌ Failed to reject action item."));
     }
   };
 
   const handleAttachmentClick = async (fileUrl, isAssignment = false, itemId) => {
     try {
-      // Determine the correct URL based on the file type
       let downloadUrl;
+      const fileName = fileUrl.split("/").pop();
       if (isAssignment) {
-        // For assignment attachments, use the action-items endpoint
-        const fileName = fileUrl.split("/").pop();
         downloadUrl = `/files/action-items/${itemId}/assignment/${fileName}`;
       } else {
-        // For submission attachments or meeting files, use the meetings endpoint
-        const fileName = fileUrl.split("/").pop();
         downloadUrl = `/files/action-items/${itemId}/submission/${fileName}`;
       }
 
       const response = await axios.get(downloadUrl, { responseType: "blob" });
       const contentDisposition = response.headers["content-disposition"];
-      let fileName = fileUrl.split("/").pop();
+      let finalName = fileName;
 
       if (contentDisposition) {
         const match = contentDisposition.match(/filename\*=UTF-8''(.+)$/);
-        if (match && match[1]) fileName = decodeURIComponent(match[1]);
+        if (match && match[1]) finalName = decodeURIComponent(match[1]);
         else {
           const match2 = contentDisposition.match(/filename="(.+)"/);
-          if (match2 && match2[1]) fileName = match2[1];
+          if (match2 && match2[1]) finalName = match2[1];
         }
       }
 
@@ -178,14 +183,14 @@ function ActionItemsList({ meetingId }) {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", fileName);
+      link.setAttribute("download", finalName);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Failed to download file:", err);
-      alert("❌ You are not authorized to view this file or it failed to load.");
+      alert(getApiErrorMessage(err, "❌ You are not authorized to view this file or it failed to load."));
     }
   };
 
@@ -197,8 +202,6 @@ function ActionItemsList({ meetingId }) {
   const ActionItemCard = ({ item }) => {
     const isSubmitted = item.status === "Submitted";
     const judgment = item.judgment;
-
-    // Emojis for fun
     const typeEmoji = item.type ? "📝" : "📌";
 
     return (
@@ -207,45 +210,28 @@ function ActionItemsList({ meetingId }) {
           <div className="flex-1">
             <p className="font-semibold text-gray-900 text-lg break-words">{typeEmoji} {item.description}</p>
             <p className="text-gray-700 text-sm">Type: {item.type || "Task"}</p>
-            <p className="text-gray-700 text-sm">
-              Assigned To: {usersMap[item.assignedToUserId] || item.assignedToUserId}
-            </p>
+            <p className="text-gray-700 text-sm">Assigned To: {usersMap[item.assignedToUserId] || item.assignedToUserId}</p>
             <p className="text-gray-700 text-sm">Status: {item.status}</p>
-            {item.deadline && (
-              <p className="text-gray-700 text-sm">
-                Deadline: {new Date(item.deadline).toLocaleDateString()}
-              </p>
-            )}
-
-            {isSubmitted && (
-              <p className="text-gray-700 text-sm">
-                Judgment:{" "}
-                <span className={`ml-1 font-medium ${
-                  judgment === "Accepted" ? "text-green-600" :
-                  judgment === "Rejected" ? "text-red-600" :
-                  "text-yellow-600"
-                }`}>{judgment}</span>
-              </p>
-            )}
+            {item.deadline && <p className="text-gray-700 text-sm">Deadline: {new Date(item.deadline).toLocaleDateString()}</p>}
+            {isSubmitted && <p className="text-gray-700 text-sm">Judgment: <span className={`ml-1 font-medium ${
+              judgment === "Accepted" ? "text-green-600" :
+              judgment === "Rejected" ? "text-red-600" :
+              "text-yellow-600"
+            }`}>{judgment}</span></p>}
 
             {/* Assignment Attachments */}
             {item.assignmentAttachmentsUrl?.length > 0 && (
               <div className="mt-3">
                 <p className="text-sm font-medium text-gray-700 mb-1">📂 Assignment Files:</p>
                 <div className="flex flex-wrap gap-2">
-                  {item.assignmentAttachmentsUrl.map((fileUrl, index) => {
-                    const fileName = fileUrl.split("/").pop();
-                    return (
-                      <span
-                        key={index}
-                        onClick={() => handleAttachmentClick(fileUrl, true, item.id)}
-                        className="cursor-pointer bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm hover:bg-green-200 transition inline-block"
-                        title={fileName}
-                      >
-                        📄 {fileName}
-                      </span>
-                    );
-                  })}
+                  {item.assignmentAttachmentsUrl.map((fileUrl, index) => (
+                    <span
+                      key={index}
+                      onClick={() => handleAttachmentClick(fileUrl, true, item.id)}
+                      className="cursor-pointer bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm hover:bg-green-200 transition inline-block"
+                      title={fileUrl.split("/").pop()}
+                    >📄 {fileUrl.split("/").pop()}</span>
+                  ))}
                 </div>
               </div>
             )}
@@ -255,50 +241,27 @@ function ActionItemsList({ meetingId }) {
               <div className="mt-3">
                 <p className="text-sm font-medium text-gray-700 mb-1">📎 Submission Files:</p>
                 <div className="flex flex-wrap gap-2">
-                  {item.submissionAttachmentsUrl.map((fileUrl, index) => {
-                    const fileName = fileUrl.split("/").pop();
-                    return (
-                      <span
-                        key={index}
-                        onClick={() => handleAttachmentClick(fileUrl, false,item.id)}
-                        className="cursor-pointer bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm hover:bg-blue-200 transition inline-block"
-                        title={fileName}
-                      >
-                        📄 {fileName}
-                      </span>
-                    );
-                  })}
+                  {item.submissionAttachmentsUrl.map((fileUrl, index) => (
+                    <span
+                      key={index}
+                      onClick={() => handleAttachmentClick(fileUrl, false, item.id)}
+                      className="cursor-pointer bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm hover:bg-blue-200 transition inline-block"
+                      title={fileUrl.split("/").pop()}
+                    >📄 {fileUrl.split("/").pop()}</span>
+                  ))}
                 </div>
               </div>
             )}
           </div>
 
-          {/* Buttons */}
           <div className="flex flex-col gap-2 mt-3 sm:mt-0 sm:ml-4">
             {isSubmitted && (judgment === "Unjudged" || judgment === "Rejected") && (
-              <button
-                onClick={() => acceptActionItem(item.id)}
-                className="px-4 py-2 rounded-lg text-white font-medium text-sm bg-green-500 hover:bg-green-600 transition"
-              >
-                ✅ Accept
-              </button>
+              <button onClick={() => acceptActionItem(item.id)} className="px-4 py-2 rounded-lg text-white font-medium text-sm bg-green-500 hover:bg-green-600 transition">✅ Accept</button>
             )}
-
             {isSubmitted && (judgment === "Unjudged" || judgment === "Accepted") && (
-              <button
-                onClick={() => rejectActionItem(item.id)}
-                className="px-4 py-2 rounded-lg text-white font-medium text-sm bg-red-500 hover:bg-red-600 transition"
-              >
-                ❌ Reject
-              </button>
+              <button onClick={() => rejectActionItem(item.id)} className="px-4 py-2 rounded-lg text-white font-medium text-sm bg-red-500 hover:bg-red-600 transition">❌ Reject</button>
             )}
-
-            <button
-              onClick={() => deleteActionItem(item.id)}
-              className="px-4 py-2 rounded-lg text-white font-medium text-sm bg-gray-500 hover:bg-gray-600 transition"
-            >
-              🗑️ Delete
-            </button>
+            <button onClick={() => deleteActionItem(item.id)} className="px-4 py-2 rounded-lg text-white font-medium text-sm bg-gray-500 hover:bg-gray-600 transition">🗑️ Delete</button>
           </div>
         </div>
       </div>
@@ -311,90 +274,34 @@ function ActionItemsList({ meetingId }) {
       {message && <p className="text-green-600 mb-2 font-medium">{message}</p>}
       {error && <p className="text-red-500 mb-2 font-medium">{error}</p>}
 
-      {/* Add New Action Item */}
+      {/* Add New Action Item Form */}
       <div className="flex flex-col gap-3 mb-6 relative bg-white p-5 rounded-2xl shadow-md">
         <h3 className="font-medium text-gray-800 mb-2">Add New Action Item</h3>
-        <input
-          type="text"
-          placeholder="Description *"
-          value={newItem.description}
-          onChange={e => setNewItem(prev => ({ ...prev, description: e.target.value }))}
-          className="border px-3 py-2 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <input
-          type="text"
-          placeholder="Type (e.g., Task, Bug, Feature)"
-          value={newItem.type}
-          onChange={e => setNewItem(prev => ({ ...prev, type: e.target.value }))}
-          className="border px-3 py-2 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <input
-          type="date"
-          placeholder="Deadline"
-          value={newItem.deadline}
-          onChange={e => setNewItem(prev => ({ ...prev, deadline: e.target.value }))}
-          className="border px-3 py-2 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        <input type="text" placeholder="Description *" value={newItem.description} onChange={e => setNewItem(prev => ({ ...prev, description: e.target.value }))} className="border px-3 py-2 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        <input type="text" placeholder="Type (e.g., Task, Bug, Feature)" value={newItem.type} onChange={e => setNewItem(prev => ({ ...prev, type: e.target.value }))} className="border px-3 py-2 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        <input type="date" placeholder="Deadline" value={newItem.deadline} onChange={e => setNewItem(prev => ({ ...prev, deadline: e.target.value }))} className="border px-3 py-2 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"/>
         <div className="relative">
-          <input
-            type="email"
-            placeholder="Assign to (email) *"
-            value={newItem.email}
-            onChange={e => setNewItem(prev => ({ ...prev, email: e.target.value }))}
-            className="border px-3 py-2 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          <input type="email" placeholder="Assign to (email) *" value={newItem.email} onChange={e => setNewItem(prev => ({ ...prev, email: e.target.value }))} className="border px-3 py-2 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"/>
           {suggestions.length > 0 && (
             <ul className="absolute top-full left-0 right-0 bg-white border rounded-lg mt-1 max-h-40 overflow-y-auto z-10 shadow-lg">
               {suggestions.map(u => (
-                <li
-                  key={u.id}
-                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer transition"
-                  onClick={() => { 
-                    setNewItem(prev => ({ ...prev, email: u.email })); 
-                    setSuggestions([]); 
-                  }}
-                >
-                  {u.email}
-                </li>
+                <li key={u.id} className="px-3 py-2 hover:bg-gray-100 cursor-pointer transition" onClick={() => { setNewItem(prev => ({ ...prev, email: u.email })); setSuggestions([]); }}>{u.email}</li>
               ))}
             </ul>
           )}
         </div>
-
         <div className="flex flex-col gap-2">
           <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 border rounded-lg px-4 py-2 text-center text-gray-700 font-medium transition">
             📎 Choose Files
-            <input
-              type="file"
-              multiple
-              onChange={e => setAttachments(Array.from(e.target.files))}
-              className="hidden"
-            />
+            <input type="file" multiple onChange={e => setAttachments(Array.from(e.target.files))} className="hidden"/>
           </label>
-
           {attachments.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {attachments.map((file, index) => (
-                <span
-                  key={index}
-                  className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full"
-                >
-                  {file.name}
-                </span>
-              ))}
-            </div>
+            <div className="flex flex-wrap gap-2">{attachments.map((file, index) => (<span key={index} className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full">{file.name}</span>))}</div>
           )}
         </div>
-
-        <button
-          onClick={addActionItem}
-          className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition mt-1 self-start font-medium"
-        >
-          ➕ Add Action Item
-        </button>
+        <button onClick={addActionItem} className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition mt-1 self-start font-medium">➕ Add Action Item</button>
       </div>
 
-      {/* Submitted Items */}
       {submittedItems.length > 0 && (
         <div className="mb-6">
           <h3 className="font-semibold text-gray-800 mb-3 text-lg">📤 Submitted Action Items ({submittedItems.length})</h3>
@@ -402,7 +309,6 @@ function ActionItemsList({ meetingId }) {
         </div>
       )}
 
-      {/* Pending Items */}
       {pendingItems.length > 0 && (
         <div>
           <h3 className="font-semibold text-gray-800 mb-3 text-lg">⏳ Pending Action Items ({pendingItems.length})</h3>

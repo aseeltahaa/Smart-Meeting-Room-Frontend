@@ -11,6 +11,17 @@ function InviteesManager({ meetingId }) {
   const [status, setStatus] = useState("");
   const [meetingData, setMeetingData] = useState(null);
 
+  // Helper to extract API error messages
+  const getApiErrorMessage = (err, fallback = "❌ Something went wrong.") => {
+    if (err.response) {
+      return err.response.data?.message || err.response.data?.error || JSON.stringify(err.response.data) || fallback;
+    } else if (err.request) {
+      return "❌ No response from server. Please try again.";
+    } else {
+      return `❌ ${err.message}`;
+    }
+  };
+
   // Fetch all users
   useEffect(() => {
     const fetchUsers = async () => {
@@ -19,7 +30,7 @@ function InviteesManager({ meetingId }) {
         setAllUsers(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
         console.error("Failed to load users:", err);
-        setStatus("❌ Failed to load users.");
+        setStatus(getApiErrorMessage(err, "❌ Failed to load users."));
       }
     };
     fetchUsers();
@@ -35,7 +46,7 @@ function InviteesManager({ meetingId }) {
         setInvitees(Array.isArray(res.data.invitees) ? res.data.invitees : []);
       } catch (err) {
         console.error("Failed to load invitees:", err);
-        setStatus("❌ Failed to load invitees.");
+        setStatus(getApiErrorMessage(err, "❌ Failed to load invitees."));
       }
     };
     fetchInvitees();
@@ -49,7 +60,7 @@ function InviteesManager({ meetingId }) {
         u.email.toLowerCase().includes(inviteeSearch.toLowerCase()) &&
         !invitees.some((i) => i.userId === u.id)
     );
-    setSuggestions(filtered);
+    setSuggestions(filtered.slice(0, 5));
   }, [inviteeSearch, allUsers, invitees]);
 
   // Add invitee
@@ -73,7 +84,7 @@ function InviteesManager({ meetingId }) {
           await notificationService.notifyUserInvited(
             user.id,
             meetingData.title || 'Meeting',
-            'Meeting Organizer' // Since we don't have current user, use generic name
+            'Meeting Organizer'
           );
           console.log('✅ Invitation notification sent successfully');
         } catch (notifError) {
@@ -82,7 +93,7 @@ function InviteesManager({ meetingId }) {
       }
     } catch (err) {
       console.error(err);
-      setStatus("❌ Failed to add invitee: " + (err.response?.data || err.message));
+      setStatus("❌ Failed to add invitee: " + getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -98,7 +109,7 @@ function InviteesManager({ meetingId }) {
       setInvitees((prev) => prev.filter((i) => i.id !== inviteeId));
     } catch (err) {
       console.error(err);
-      setStatus("❌ Failed to remove invitee: " + (err.response?.data || err.message));
+      setStatus("❌ Failed to remove invitee: " + getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -172,8 +183,7 @@ function InviteesManager({ meetingId }) {
                 className="flex justify-between items-center p-2 border-b"
               >
                 <span>
-                  {i.email} –{" "}
-                  <strong>{i.attendance || "No Response"}</strong>
+                  {i.email} – <strong>{i.attendance || "No Response"}</strong>
                 </span>
                 <button
                   className="text-red-600 hover:text-red-800"
