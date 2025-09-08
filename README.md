@@ -7,20 +7,20 @@
 ## ✨ Features
 
 - 🔐 **User Authentication & Roles** – Three user roles with designated permissions:  
-  - **Admin**: Access to the admin panel, manage users, and view analytics.  
-  - **Employee**: Schedule meetings, manage action items, and check room availability.  
+  - **Admin**: Access to the admin panel, manage users, rooms, and features.  
+  - **Employee**: Schedule meetings, manage and view minutes of meeting, and check room availability.  
   - **Guest**: Limited access to join/view meetings and assigned tasks.  
 
-- ⚙️ **Admin Panel** – Manage users, roles, and meeting data through a dedicated interface.  
-- 👤 **User Profiles** – Personalized profiles with user information and customizable settings.  
-- 📈 **Room Analytics** – Track room usage, meeting statistics, and overall utilization.  
-- 📝 **Meeting Notes** – Notes and documents accessible only after the meeting starts.  
+- ⚙️ **Admin Panel** – Manage users, roles, rooms, and features through a dedicated interface.  
+- 👤 **User Profiles** – Personalized profiles with user information, analytics, meetings dashboard, and customizable settings.  
+- 📈 **Room Analytics** – Track room usage, meeting statistics, and overall utilization.
+- 📆 **Meeting Scheduling** – Easily create, view, and manage meetings.    
+- 📝 **Meeting Notes and Attachments** – Notes and documents accessible by meeting attendees.  
 - 🔁 **Recurring Meetings** – Schedule meetings to repeat daily, weekly, or monthly.  
 - 🗓️ **Rescheduling** – Update meeting details or time before the meeting starts.  
 - 🔔 **Notifications** – Real-time alerts for meetings, action items, and reschedules.  
-- 📆 **Meeting Scheduling** – Easily create, view, and manage meetings.  
-- 📝 **Action Items Tracking** – Assign and monitor tasks linked to meetings.  
-
+- 📝 **Action Items Tracking** – Assign and monitor tasks linked to meetings, includes:submissions, attachments, and judgment.
+  
 ---
 
 ## 🛠️ Tech Stack
