@@ -3,6 +3,8 @@ import MainSection from './Components/MainSection';
 import Report from './Components/Report';
 import PopularRooms from './Components/PopularRooms';
 import Footer from './Components/Footer';
+import BiggestRooms from './Components/BiggestRooms';
+import TopOrganizers from './Components/TopOrganizers';
 
 function App() {
   return (
@@ -11,6 +13,8 @@ function App() {
       <MainSection/>
       <Report/>
       <PopularRooms/>
+      <BiggestRooms/>
+      <TopOrganizers/>
       <Footer/>
     </>
   );

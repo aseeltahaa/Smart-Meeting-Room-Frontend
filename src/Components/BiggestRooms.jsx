@@ -5,7 +5,7 @@ import Card from "./Card";
 import RoomImage from "../assets/room.jpg";
 import "../App.css";
 
-function PopularRooms() {
+function BiggestRooms() {
   const [rooms, setRooms] = useState([null, null, null]);
   const [loading, setLoading] = useState(true);
 
@@ -17,25 +17,23 @@ function PopularRooms() {
         return `${u.protocol}//${u.host}`;
       }
     } catch {}
-    // Fallback to current origin or your known backend origin
     return window.location.origin || "https://localhost:7074";
   }, []);
 
   const resolveImageUrl = (imageUrl) => {
     if (!imageUrl) return RoomImage;
-    if (/^https?:\/\//i.test(imageUrl)) return imageUrl; // already absolute
-    // ensure single slash between origin and path
+    if (/^https?:\/\//i.test(imageUrl)) return imageUrl; 
     const path = imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`;
     return `${apiOrigin}${path}`;
   };
 
+
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        const { data } = await axios.get("/Meeting/top-rooms");
+        const { data } = await axios.get("/Room/biggest-rooms");
         const list = Array.isArray(data) ? data : [];
 
-        // Normalize to exactly 3 slots
         const normalized = [null, null, null];
         for (let i = 0; i < 3 && i < list.length; i++) {
           normalized[i] = list[i];
@@ -55,7 +53,7 @@ function PopularRooms() {
   return (
     <section className="mt-[-60px] mb-16 sm:mb-24 lg:mb-32">
       <p className="text-[36px] sm:text-[60px] font-bold text-center text-[#111827] mb-10">
-        Popular Rooms
+        Biggest Rooms
       </p>
 
       <div className="p-4 sm:p-8 flex items-center justify-center">
@@ -93,4 +91,4 @@ function PopularRooms() {
   );
 }
 
-export default PopularRooms;
+export default BiggestRooms;
