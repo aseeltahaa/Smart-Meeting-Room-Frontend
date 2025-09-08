@@ -19,7 +19,7 @@
 - 🔁 **Recurring Meetings** – Schedule meetings to repeat daily, weekly, or monthly.  
 - 🗓️ **Rescheduling** – Update meeting details or time before the meeting starts.  
 - 🔔 **Notifications** – Real-time alerts for meetings, action items, and reschedules.  
-- 📝 **Action Items Tracking** – Assign and monitor tasks linked to meetings, includes:submissions, attachments, and judgment.
+- 📝 **Action Items Tracking** – Assign and monitor tasks linked to meetings, **includes**: submissions, attachments, and judgment.
   
 ---
 
