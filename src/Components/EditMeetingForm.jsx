@@ -9,6 +9,7 @@ function EditMeetingForm({ meetingId }) {
     startTime: "",
     endTime: "",
     status: "",
+    onlineLink:"",
     roomId: "",
     userId: "",
   });
@@ -228,6 +229,17 @@ function EditMeetingForm({ meetingId }) {
         placeholder="Status"
         className="w-full border rounded px-3 py-2 mb-4"
       />
+
+      {/* Link */}
+      <label className="block mb-1 font-medium">Online Link</label>
+      <textarea
+        name="onlineLink"
+        value={formData.onlineLink}
+        onChange={handleChange}
+        placeholder="online link"
+        className="w-full border rounded px-3 py-2 mb-4"
+      />
+
 
       {/* Room search */}
       <label className="block mb-1 font-medium">Room</label>

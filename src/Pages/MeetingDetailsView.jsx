@@ -128,6 +128,7 @@ const handleDownload = useCallback(async (attachmentUrl, e) => {
     lines.push(`End: ${formatDateTime(meeting.endTime)}`);
     lines.push(`Created: ${formatDateTime(meeting.createdAt)}`);
     lines.push(`Updated: ${formatDateTime(meeting.updatedAt)}`);
+    lines.push(`Online Link: ${meeting.onlineLink || "N/A"}`);
 
     lines.push("");
     lines.push("Agenda:");
@@ -244,6 +245,21 @@ const handleDownload = useCallback(async (attachmentUrl, e) => {
           <div>
             <p><span className="font-semibold">Organizer (User ID):</span> {meeting.userId || "N/A"}</p>
             <p><span className="font-semibold">Recurring Booking ID:</span> {meeting.recurringBookingId ?? "None"}</p>
+            <p>
+              <span className="font-semibold">Online Meeting Link:</span>{" "}
+              {meeting.onlineLink ? (
+                <a
+                  href={meeting.onlineLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 underline hover:text-blue-800"
+                >
+                  {meeting.onlineLink}
+                </a>
+              ) : (
+                "None"
+              )}
+            </p>
           </div>
         </div>
 

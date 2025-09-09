@@ -14,7 +14,7 @@ function RoomInfo() {
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   // Form state
-  const [formData, setFormData] = useState({ title: '', agenda: '', startTime: '', endTime: '' });
+  const [formData, setFormData] = useState({ title: '', agenda: '', startTime: '', endTime: '',onlineLink:''});
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrencePattern, setRecurrencePattern] = useState('Daily');
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
@@ -142,6 +142,7 @@ function RoomInfo() {
         startTime: startUTC,
         endTime: endUTC,
         status: 'Scheduled',
+        onlineLink: formData.onlineLink || '',
         roomId,
       };
 
@@ -157,6 +158,8 @@ function RoomInfo() {
           agenda: formData.agenda || '',
           startTime: startUTC,
           endTime: endUTC,
+          status: 'Scheduled',
+          onlineLink: formData.onlineLink || '',
           recurrencePattern,
           recurrenceEndDate: new Date(recurrenceEndDate).toISOString(),
         };
@@ -178,7 +181,7 @@ function RoomInfo() {
 
       await res.json();
       setBookingSuccess('Meeting booked successfully!');
-      setFormData({ title: '', agenda: '', startTime: '', endTime: '' });
+      setFormData({ title: '', agenda: '', startTime: '', endTime: '',onlineLink:'' });
       setIsRecurring(false);
       setRecurrencePattern('Daily');
       setRecurrenceEndDate('');
@@ -314,6 +317,9 @@ function RoomInfo() {
           </label>
           <label className="flex flex-col">End Time:
             <input type="time" value={formData.endTime} onChange={e => setFormData({ ...formData, endTime: e.target.value })} className="border px-2 py-1 rounded" />
+          </label>
+            <label className="flex flex-col">Online Link:
+            <input type="text" value={formData.onlineLink} onChange={e => setFormData({ ...formData, onlineLink: e.target.value })} className="border px-2 py-1 rounded" />
           </label>
 
           {/* Recurrence */}
