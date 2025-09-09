@@ -1,4 +1,12 @@
-import { FiHome, FiBookOpen, FiUser, FiLogIn, FiUsers, FiInfo, FiBell } from 'react-icons/fi';
+import {
+  FiHome,
+  FiBookOpen,
+  FiUser,
+  FiLogIn,
+  FiUsers,
+  FiInfo,
+  FiBell,
+} from "react-icons/fi";
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import logo from "../assets/logo.png";
@@ -43,7 +51,7 @@ function Header({ showSearchBar = false, showGradient = true, onSearch }) {
     if (!isLoggedIn) return;
     try {
       const res = await api.get("/Notifications"); // endpoint for notifications
-      const unreadCount = res.data.filter(n => !n.isRead).length;
+      const unreadCount = res.data.filter((n) => !n.isRead).length;
       setHasUnread(unreadCount > 0);
     } catch (err) {
       console.error("Failed to fetch unread notifications:", err);
@@ -63,7 +71,8 @@ function Header({ showSearchBar = false, showGradient = true, onSearch }) {
     }
     const handleUpdate = () => fetchUnreadNotifications();
     window.addEventListener("notifications-updated", handleUpdate);
-    return () => window.removeEventListener("notifications-updated", handleUpdate);
+    return () =>
+      window.removeEventListener("notifications-updated", handleUpdate);
   }, [isLoggedIn]);
 
   return (
@@ -76,7 +85,9 @@ function Header({ showSearchBar = false, showGradient = true, onSearch }) {
       )}
 
       <header
-        className={`relative z-50 mx-auto px-6 py-10 flex justify-between items-center ${showGradient ? "" : "text-black"}`}
+        className={`relative z-50 mx-auto px-6 py-10 flex justify-between items-center ${
+          showGradient ? "" : "text-black"
+        }`}
         style={{ maxWidth: "1200px", color: showGradient ? undefined : "#111" }}
       >
         <div className="flex justify-center items-center relative">
@@ -88,10 +99,20 @@ function Header({ showSearchBar = false, showGradient = true, onSearch }) {
             />
           </Link>
           <nav className="hidden md:inline">
+            <Link
+              to="/AboutUs"
+              className={`${
+                showGradient ? "text-white" : "text-black"
+              } py-8 px-4 no-underline`}
+            >
+              About Us
+            </Link>
             {isLoggedIn && (
               <Link
                 to="/RoomDisplay"
-                className={`${showGradient ? "text-white" : "text-black"} py-8 px-4 no-underline`}
+                className={`${
+                  showGradient ? "text-white" : "text-black"
+                } py-8 px-4 no-underline`}
               >
                 Booking
               </Link>
@@ -99,17 +120,13 @@ function Header({ showSearchBar = false, showGradient = true, onSearch }) {
             {isLoggedIn && isAdmin && (
               <Link
                 to="/UserManagement"
-                className={`${showGradient ? "text-white" : "text-black"} py-8 px-4 no-underline`}
+                className={`${
+                  showGradient ? "text-white" : "text-black"
+                } py-8 px-4 no-underline`}
               >
                 Admin Panel
               </Link>
             )}
-            <Link
-              to="/AboutUs"
-              className={`${showGradient ? "text-white" : "text-black"} py-8 px-4 no-underline`}
-            >
-              About Us
-            </Link>
           </nav>
         </div>
 
@@ -119,7 +136,11 @@ function Header({ showSearchBar = false, showGradient = true, onSearch }) {
           {isLoggedIn && (
             <Link to="/notifications" className="flex items-center relative">
               <FiBell
-                className={showGradient ? "text-white hover:text-gray-200 transition-colors duration-300" : "text-black hover:text-gray-700 transition-colors duration-300"}
+                className={
+                  showGradient
+                    ? "text-white hover:text-gray-200 transition-colors duration-300"
+                    : "text-black hover:text-gray-700 transition-colors duration-300"
+                }
                 size={24}
               />
               {hasUnread && (
@@ -149,7 +170,11 @@ function Header({ showSearchBar = false, showGradient = true, onSearch }) {
             {isLoggedIn && (
               <Link to="/notifications" className="flex items-center relative">
                 <FiBell
-                  className={showGradient ? "text-white hover:text-gray-200 transition-colors duration-300" : "text-black hover:text-gray-700 transition-colors duration-300"}
+                  className={
+                    showGradient
+                      ? "text-white hover:text-gray-200 transition-colors duration-300"
+                      : "text-black hover:text-gray-700 transition-colors duration-300"
+                  }
                   size={24}
                 />
                 {hasUnread && (
@@ -180,30 +205,58 @@ function Header({ showSearchBar = false, showGradient = true, onSearch }) {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="fixed top-0 right-0 h-full w-3/4 bg-white bg-opacity-80 z-70 flex flex-col items-center justify-center md:hidden transition-all duration-300 ease-in-out">
-          {showSearchBar && <div className="mb-4 w-full px-6"><RoomSearchBar onSearch={onSearch} /></div>}
+          {showSearchBar && (
+            <div className="mb-4 w-full px-6">
+              <RoomSearchBar onSearch={onSearch} />
+            </div>
+          )}
           <nav className="flex flex-col gap-8">
-            <Link to="/" className="text-xl flex items-center gap-2" onClick={() => setMenuOpen(false)}>
+            <Link
+              to="/"
+              className="text-xl flex items-center gap-2"
+              onClick={() => setMenuOpen(false)}
+            >
               <FiHome size={22} /> Home
             </Link>
+            <Link
+              to="/AboutUs"
+              className="text-xl flex items-center gap-2"
+              onClick={() => setMenuOpen(false)}
+            >
+              <FiInfo size={22} /> About Us
+            </Link>
             {isLoggedIn && (
-              <Link to="/RoomDisplay" className="text-xl flex items-center gap-2" onClick={() => setMenuOpen(false)}>
+              <Link
+                to="/RoomDisplay"
+                className="text-xl flex items-center gap-2"
+                onClick={() => setMenuOpen(false)}
+              >
                 <FiBookOpen size={22} /> Booking
               </Link>
             )}
             {isLoggedIn && isAdmin && (
-              <Link to="/UserManagement" className="text-xl flex items-center gap-2" onClick={() => setMenuOpen(false)}>
+              <Link
+                to="/UserManagement"
+                className="text-xl flex items-center gap-2"
+                onClick={() => setMenuOpen(false)}
+              >
                 <FiUsers size={22} /> Admin Panel
               </Link>
             )}
-            <Link to="/AboutUs" className="text-xl flex items-center gap-2" onClick={() => setMenuOpen(false)}>
-              <FiInfo size={22} /> About Us
-            </Link>
             {isLoggedIn ? (
-              <Link to="/profile" className="text-xl flex items-center gap-2" onClick={() => setMenuOpen(false)}>
+              <Link
+                to="/profile"
+                className="text-xl flex items-center gap-2"
+                onClick={() => setMenuOpen(false)}
+              >
                 <FiUser size={22} /> Profile
               </Link>
             ) : (
-              <Link to="/Login" className="text-xl flex items-center gap-2" onClick={() => setMenuOpen(false)}>
+              <Link
+                to="/Login"
+                className="text-xl flex items-center gap-2"
+                onClick={() => setMenuOpen(false)}
+              >
                 <FiLogIn size={22} /> Login
               </Link>
             )}

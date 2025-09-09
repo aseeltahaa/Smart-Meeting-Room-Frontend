@@ -20,42 +20,41 @@ import TasksView from './Pages/TasksView.jsx';
 import ManageUsers from './Pages/ManageUsers.jsx';
 import ManageRooms from './Pages/ManageRooms.jsx';
 import ManageFeatures from './Pages/ManageFeatures.jsx';
-import AdminRoute from './AdminRoutes.jsx';
+import AdminRoute from './restrict access/AdminRoutes.jsx';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import ProtectedRoute from './restrict access/ProtectedRoute.jsx';
 
-// Example: get current user from localStorage
 const currentUser = JSON.parse(localStorage.getItem("user"));
 
-const router = createBrowserRouter([
-  // General / Main App
-  { path: "/", element: <App /> },
 
-  // Auth & Info Pages
+const router = createBrowserRouter([
+  // Public Routes
+  { path: "/", element: <App /> },
   { path: "/login", element: <LoginPage /> },
   { path: "/aboutus", element: <AboutUs /> },
   { path: "/RoomDisplay", element: <RoomDisplay /> },
   { path: "/room/:roomId", element: <RoomInfo /> },
-  { path: "/profile", element: <Profile /> },
   { path: "/reset-password", element: <ResetPassword /> },
 
-  // Admin Routes (Protected)
+  // Protected Routes (login required)
+  { path: "/profile", element: <ProtectedRoute user={currentUser}><Profile /></ProtectedRoute> },
+  { path: "/notifications", element: <ProtectedRoute user={currentUser}><Notifications /></ProtectedRoute> },
+
+  // Meeting Pages (protected)
+  { path: "/meetings/:id/details", element: <ProtectedRoute user={currentUser}><MeetingDetailsPage /></ProtectedRoute> },
+  { path: "/meetings/:id/invitees", element: <ProtectedRoute user={currentUser}><MeetingInviteesPage /></ProtectedRoute> },
+  { path: "/meetings/:id/actions", element: <ProtectedRoute user={currentUser}><MeetingActionsPage /></ProtectedRoute> },
+  { path: "/meetings/:id/notes", element: <ProtectedRoute user={currentUser}><MeetingNotesPage /></ProtectedRoute> },
+
+  // Meeting View Pages (protected)
+  { path: "/meetings/:id/detailsView", element: <ProtectedRoute user={currentUser}><MeetingDetailsView /></ProtectedRoute> },
+  { path: "/meetings/:id/notesView", element: <ProtectedRoute user={currentUser}><NotesView /></ProtectedRoute> },
+  { path: "/meetings/:id/tasksView", element: <ProtectedRoute user={currentUser}><TasksView /></ProtectedRoute> },
+
+  // Admin Routes (still admin-protected)
   { path: "/RoomManagement", element: <AdminRoute user={currentUser}><ManageRooms /></AdminRoute> },
   { path: "/FeatureManagement", element: <AdminRoute user={currentUser}><ManageFeatures /></AdminRoute> },
   { path: "/UserManagement", element: <AdminRoute user={currentUser}><ManageUsers /></AdminRoute> },
-
-  // Meetings Pages
-  { path: "/meetings/:id/details", element: <MeetingDetailsPage /> },
-  { path: "/meetings/:id/invitees", element: <MeetingInviteesPage /> },
-  { path: "/meetings/:id/actions", element: <MeetingActionsPage /> },
-  { path: "/meetings/:id/notes", element: <MeetingNotesPage /> },
-
-  // View Pages
-  { path: "/meetings/:id/detailsView", element: <MeetingDetailsView /> },
-  { path: "/meetings/:id/notesView", element: <NotesView /> },
-  { path: "/meetings/:id/tasksView", element: <TasksView /> },
-
-  // Notifications
-  { path: "/notifications", element: <Notifications /> },
 
   // Catch-all
   { path: "*", element: <NotFound /> }
