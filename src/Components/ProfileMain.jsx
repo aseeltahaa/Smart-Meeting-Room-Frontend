@@ -131,7 +131,7 @@ function ProfileMain() {
         </p>
 
         <p className="text-gray-600">
-          Roles:{" "}
+          Role:{" "}
           {user.roles?.length > 0 ? user.roles.join(", ") : "No roles assigned"}
         </p>
 
